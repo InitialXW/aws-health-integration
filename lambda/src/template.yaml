@@ -1,0 +1,30 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  Log services for org
+
+Resources:
+  CallbackEventFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      PackageType: Zip
+      CodeUri: handlers/callbackEvent/
+      Handler: app.lambdaHandler
+      Runtime: nodejs18.x
+      Timeout: 10
+      MemorySize: 128
+      Architectures:
+        # - x86_64
+        - arm64
+      Environment:
+        Variables:
+          CALLBACK_URL: ""
+          NODE_OPTIONS: "--enable-source-maps"
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: "es2020"
+        Sourcemap: false
+        EntryPoints:
+        - app.ts
