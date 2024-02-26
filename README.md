@@ -4,6 +4,7 @@
 - A working illustration of how AWS Organization Heath featured events can be integrated into your IT operations for automated monitoring, triage, and reporting.
 - Can be built further on to integrate with more types of events and other internal/external services of yours.
 - Built fully on serverless and event-driven architecture (EDA) on AWS
+- Cost of running/hosting on AWS should be less than US$5 per month with reasonable amount of events consumed.
 
 ## Summary of what is contained
 - A health event processing microservice to consume organization health events and an example tracking/triage workflow.
