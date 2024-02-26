@@ -34,17 +34,17 @@ cd lambda/src
 sam build --use-container
 cd ../..
 ```
-### create an '.env' file under project root directory that contains the following
+### Create an '.env' file under project root directory that contains the following
 ```zsh
-CDK_ADMIN_ACCOUNT=<replace with your admin AWS account id>
-CDK_PROCESSING_ACCOUNT=<replace with your worker AWS account id>
-CDK_ADMIN_REGION=<replace with the region where your Organization is>
-CDK_PROCESSING_REGION=<replace with the region where you want the worker services to be>
-SLACK_CHANNEL_HOOK=<your Slack channel webhook url>
-SLACK_CALL_API_KEY=<assign an randow api key to be used when initiating Slack webhook calls>
+CDK_ADMIN_ACCOUNT=<replace with your 12 digits admin AWS account id>
+CDK_PROCESSING_ACCOUNT=<replace with your 12 digits worker AWS account id>
+CDK_ADMIN_REGION=<replace with the region where your Organization is, e.g. us-east-1>
+CDK_PROCESSING_REGION=<replace with the region where you want the worker services to be, e.g. us-east-1>
+SLACK_CHANNEL_HOOK=<your Slack channel webhook url here>
+SLACK_CALL_API_KEY=<assign an random api key to be used when initiating Slack webhook calls, all letters>
 LIFECYCLE_NOTIFY_EMAIL=<an email address to receive the triaged approval requests for lifecycle type of health events>
 OPS_ISSUE_NOTIFY_EMAIL=<an email address to receive the triaged approval requests for operational issue type of health events>
-EVENT_HUB_ARN=<to be filled in at later steps once you get your deployed event hub bus ARN>
+EVENT_HUB_ARN=arn:aws:events:ap-southeast-2:111222333444:event-bus/HealthProcessingHealthEventBus
 ```
 ### Deploy worker account stack
 ```zsh
