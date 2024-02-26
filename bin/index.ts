@@ -43,5 +43,5 @@ new HealthOrgStack(app, 'HealthOrgStack', {
     account: process.env.CDK_ADMIN_ACCOUNT,
     region: process.env.CDK_ADMIN_REGION,
   },
-  healthEventBusArn: process.env.EVENT_HUB_ARN
+  healthEventBusArn: process.env.EVENT_HUB_ARN as string
 });
