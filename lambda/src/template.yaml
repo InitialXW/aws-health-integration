@@ -1,7 +1,7 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: >
-  Log services for org
+  Utility functions for AWS Health Event processing
 
 Resources:
   CallbackEventFunction:
@@ -19,7 +19,6 @@ Resources:
       Environment:
         Variables:
           CALLBACK_URL: ""
-          NODE_OPTIONS: "--enable-source-maps"
     Metadata:
       BuildMethod: esbuild
       BuildProperties:
