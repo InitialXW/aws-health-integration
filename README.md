@@ -17,7 +17,10 @@
 - AWS SAM (Serverless Application Model) and Docker installed on your local environment to build Lambda images
 
 ## Architecture
-<img src="https://github.com/InitialXW/aws-health-integration/blob/main/architecture.png" align="right" alt="Archetectural diagram by seanxw" width="120" height="178">
+<p align="left">
+<img src="https://github.com/InitialXW/aws-health-integration/blob/main/architecture.png"
+  alt="Archetectural diagram by seanxw">
+</p>
 
 ## Deployment steps
 ### Copy repo to your local directory
