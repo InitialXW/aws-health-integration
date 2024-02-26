@@ -128,5 +128,6 @@ Test event 2 (a Ops issue event)
 ```
 ## Going beyond
 [Integration with ServiceNow](https://docs.aws.amazon.com/smc/latest/ag/sn-aws-health.html)
+
 [Integration with Jira](https://marketplace.atlassian.com/apps/1221283/aws-service-management-connector-for-jsm?tab=overview&hosting=cloud)
 
