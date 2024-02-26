@@ -10,3 +10,4 @@ cdk.out
 lambda/src/events
 package-lock.json
 testdeployment
+*.drawio
