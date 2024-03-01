@@ -38,7 +38,7 @@ cd ../..
 ### Create an '.env' file under project root directory that contains the following
 ```zsh
 CDK_ADMIN_ACCOUNT=<replace with your 12 digits admin AWS account id>
-CDK_PROCESSING_ACCOUNT=<replace with your 12 digits worker AWS account id>
+CDK_PROCESSING_ACCOUNT=<replace with your 12 digits worker AWS account id. This account id is the same as the admin account id if using single account setup>
 CDK_ADMIN_REGION=<replace with the region where your Organization is, e.g. us-east-1>
 CDK_PROCESSING_REGION=<replace with the region where you want the worker services to be, e.g. us-east-1>
 SLACK_CHANNEL_HOOK=<your Slack channel webhook url here>
