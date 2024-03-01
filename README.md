@@ -1,6 +1,6 @@
 # Integrate AWS Health Events to Operation
 
-- This project is built on AWS and deployable using AWS CDK as IaaS.
+- This project is built on AWS and deployable using AWS CDK as IaaC (Infrastructure as code).
 - A working illustration of how AWS Organization Heath featured events can be integrated into your IT operations for automated monitoring, triage, and reporting.
 - Can be built further on to integrate with more types of events and other internal/external services of yours.
 - Built fully on serverless and event-driven architecture (EDA) on AWS
