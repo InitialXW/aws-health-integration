@@ -24,9 +24,9 @@ interface EventParams {
 interface ApiGwResponse {
   isBase64Encoded: true | false,
   headers: {
-    'Content-Type': 'application/json',
-    'Access-Control-Allow-Methods': '*',
-    'Access-Control-Allow-Origin': '*'
+    'Content-Type': string
+    'Access-Control-Allow-Methods': string
+    'Access-Control-Allow-Origin': string
   },
   statusCode: Number,
   body: string
@@ -36,6 +36,11 @@ let credentialProvider = fromNodeProviderChain({})
 const sfn = new SFNClient({ credentials: credentialProvider })
 const sts = new STSClient({ credentials: credentialProvider });
 const getCallerIdentityCommand = new GetCallerIdentityCommand({});
+const responseHeaders = {
+  'Content-Type': 'application/json',
+  'Access-Control-Allow-Methods': '*',
+  'Access-Control-Allow-Origin': '*'
+}
 
 export const lambdaHandler = async (event: any, context: any): Promise<ApiGwResponse> => {
   console.log('Event content:', JSON.stringify(event))
@@ -43,11 +48,7 @@ export const lambdaHandler = async (event: any, context: any): Promise<ApiGwResp
   if (!('queryStringParameters' in event) || event.queryStringParameters===null ||!('taskToken' in event.queryStringParameters && 'status' in event.queryStringParameters)){
     return {
       isBase64Encoded: false,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Methods': '*',
-        'Access-Control-Allow-Origin': '*',
-      },
+      headers: responseHeaders,
       statusCode: 401,
       body: 'Querystring input does not match input type.'
     }
@@ -62,11 +63,7 @@ export const lambdaHandler = async (event: any, context: any): Promise<ApiGwResp
     const eventParams = event.queryStringParameters as SuccessEventParams
     return {
       isBase64Encoded: false,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Methods': '*',
-        'Access-Control-Allow-Origin': '*',
-      },
+      headers: responseHeaders,
       statusCode: 200,
       body: JSON.stringify(await callbackWithSuccess(eventParams))
     }
@@ -74,11 +71,7 @@ export const lambdaHandler = async (event: any, context: any): Promise<ApiGwResp
     const eventParams = event.queryStringParameters as FailureEventParams
     return {
       isBase64Encoded: false,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Methods': '*',
-        'Access-Control-Allow-Origin': '*',
-      },
+      headers: responseHeaders,
       statusCode: 500,
       body: JSON.stringify(await callbackWithFailure(eventParams))
     }
