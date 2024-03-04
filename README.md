@@ -49,7 +49,7 @@ EVENT_HUB_ARN=arn:aws:events:ap-southeast-2:111222333444:event-bus/HealthProcess
 ```
 ### Deploy worker account stack
 ```zsh
-# deploying processing microservice to your worker account
+# deploying processing microservice to your worker account, can be the same account as your admin account
 # ensure you are in project root directory
 cdk deploy HealthProcessingStack
 ```
@@ -102,7 +102,7 @@ Test event 1 (a lifecycle event)
 }
 ```
 
-Test event 2 (a Ops issue event)
+Test event 2 (an Ops issue event)
 ```json
 {
     "eventArn": "arn:aws:health:global::event/IAM/AWS_IAM_OPERATIONAL_ISSUE/AWS_FAKE_OPERATIONAL_ISSUE_12345_ABCDEFGHIJK",

@@ -146,13 +146,13 @@ export class HealthProcessingStack extends cdk.Stack {
     /*************************************************************************************** */
 
     /****** Dedicated event bus for AWS Health event processing microservices*************** */
-    const healthEventBus = new events.EventBus(this, "HealthEventBus", {
-      eventBusName: `${cdk.Stack.of(this).stackName}HealthEventBus`,
+    const integrationEventBus = new events.EventBus(this, "IntegrationEventBus", {
+      eventBusName: `${cdk.Stack.of(this).stackName}IntegrationEventBus`,
     })
 
     const cfnEventBusResourcePolicy = new events.CfnEventBusPolicy(this, "EventBusResourcePolicy", {
       statementId: "EventBusResourcePolicy",
-      eventBusName: healthEventBus.eventBusName,
+      eventBusName: integrationEventBus.eventBusName,
       statement:
       {
         "Effect": "Allow",
@@ -162,11 +162,11 @@ export class HealthProcessingStack extends cdk.Stack {
         "Principal": {
           "AWS": props.scopedAccountIds
         },
-        "Resource": healthEventBus.eventBusArn
+        "Resource": integrationEventBus.eventBusArn
       }
     });
 
-    new cdk.CfnOutput(this, "EventLakeBusArn", { value: healthEventBus.eventBusArn })
+    new cdk.CfnOutput(this, "EventLakeBusArn", { value: integrationEventBus.eventBusArn })
     /******************************************************************************* */
 
     /*** AWS Data Firehose to stream events received into S3 bucket data lake*****************/
@@ -351,7 +351,7 @@ export class HealthProcessingStack extends cdk.Stack {
       architecture: lambda.Architecture.ARM_64,
       reservedConcurrentExecutions: 1,
       role: lambdaExecutionRole,
-      tracing: lambda.Tracing.ACTIVE,
+      tracing: lambda.Tracing.DISABLED,
       environment: {
       },
     });
@@ -413,7 +413,7 @@ export class HealthProcessingStack extends cdk.Stack {
       definitionBody: sfn.DefinitionBody.fromString(fs.readFileSync(path.join(__dirname, '../state-machine/processing-flow.asl')).toString().trim()),
       definitionSubstitutions: {
         "HealthEventManagementTablePlaceHolder": healthEventManagementTable.tableName,
-        "HealthProcessingHealthEventBusPlaceholder": healthEventBus.eventBusName,
+        "HealthProcessingHealthEventBusPlaceholder": integrationEventBus.eventBusName,
       },
       tracingEnabled: false,
       stateMachineType: sfn.StateMachineType.STANDARD,
@@ -422,7 +422,7 @@ export class HealthProcessingStack extends cdk.Stack {
     });
 
     const eventLakeRule = new events.Rule(this, 'EventLakeRule', {
-      eventBus: healthEventBus,
+      eventBus: integrationEventBus,
       eventPattern: {
         // source: [{ prefix: '' }] as any[]
         source: ['aws.health', 'awstest.health']
@@ -433,7 +433,7 @@ export class HealthProcessingStack extends cdk.Stack {
     });
     /******************************************************************************* */
 
-    /*** State machine for integration microservices *****/
+    /*** State machine for health event integration microservices *****/
     const integrationSfn = new sfn.StateMachine(this, 'HealthEventIntegration', {
       definitionBody: sfn.DefinitionBody.fromString(fs.readFileSync(path.join(__dirname, '../state-machine/integration-flow.asl')).toString().trim()),
       definitionSubstitutions: {
@@ -450,11 +450,11 @@ export class HealthProcessingStack extends cdk.Stack {
     });
 
     const integrationRule = new events.Rule(this, 'IntegrationRule', {
-      eventBus: healthEventBus,
+      eventBus: integrationEventBus,
       eventPattern: {
         source: ['awsutils.healtheventintegration']
       },
-      ruleName: 'IntegrationRule',
+      ruleName: 'HealthIntegrationRule',
       description: 'Health event processing integration with external services.',
       targets: [new evtTargets.SfnStateMachine(integrationSfn)]
     });

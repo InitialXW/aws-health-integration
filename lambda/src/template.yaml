@@ -27,3 +27,4 @@ Resources:
         Sourcemap: false
         EntryPoints:
         - app.ts
+
