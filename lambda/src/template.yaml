@@ -28,3 +28,71 @@ Resources:
         EntryPoints:
         - app.ts
 
+  HandleSlackCommFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      PackageType: Zip
+      CodeUri: handlers/handleSlackComm/
+      Handler: app.lambdaHandler
+      Runtime: nodejs18.x
+      Timeout: 10
+      MemorySize: 128
+      Architectures:
+        # - x86_64
+        - arm64
+      Environment:
+        Variables:
+          SLACK_APP_VERIFICATION_TOKEN: 'string'
+          SLACK_ACCESS_TOKEN: 'string'
+          INTEGRATION_EVENT_BUS_NAME:  "string"
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: "es2020"
+        Sourcemap: false
+        EntryPoints:
+        - app.ts
+
+  IngestKbFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      PackageType: Zip
+      CodeUri: handlers/ingestKb/
+      Handler: app.lambdaHandler
+      Runtime: nodejs18.x
+      Timeout: 10
+      MemorySize: 128
+      Architectures:
+        # - x86_64
+        - arm64
+      Environment:
+        Variables:
+          KNOWLEDGE_BASE_ID: "string"
+          KB_DATA_SOURCE_ID": "string"
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: "es2020"
+        Sourcemap: false
+        EntryPoints:
+        - app.ts
+
+  JsonToKnowledgeBaseFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      PackageType: Zip
+      CodeUri: handlers/jsonToKnowledgeBase/
+      Handler: app.lambdaHandler
+      Runtime: nodejs18.x
+      Timeout: 10
+      MemorySize: 128
+      Architectures:
+        # - x86_64
+        - arm64
+      Environment:
+        Variables:
+          TARGET_S3: "string"
+          TARGET_S3_REGION: "string"
+

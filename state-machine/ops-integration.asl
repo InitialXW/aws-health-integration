@@ -42,10 +42,84 @@
         "ApiEndpoint": "${SlackApiEndpointPlaceholder}",
         "Method": "POST",
         "RequestBody": {
-          "content.$": "States.Format('\nYou have a new AWS Health event arrived!\nEvent Type: {}\nCurrent Status: {}\nEvent Start time: {}\nEvent Description: {}\n\nApprove or reject ticket creation from email received', $.detail.CarryingPayload.detail.eventTypeCode, $.detail.CarryingPayload.detail.statusCode, $.detail.CarryingPayload.detail.startTime, $.detail.CarryingPayload.detail.eventDescription[0].latestDescription)"
+          "blocks": [
+            {
+              "type": "header",
+              "text": {
+                "type": "plain_text",
+                "text": "Request for ticket creation for a new AWS Health event",
+                "emoji": true
+              }
+            },
+            {
+              "type": "section",
+              "fields": [
+                {
+                  "type": "mrkdwn",
+                  "text.$": "States.Format('*Event Type:* {}', $.detail.CarryingPayload.detail.eventTypeCode)"
+                }
+              ]
+            },
+            {
+              "type": "section",
+              "fields": [
+                {
+                  "type": "mrkdwn",
+                  "text.$": "States.Format('*Event Status:* {}', $.detail.CarryingPayload.detail.statusCode)"
+                }
+              ]
+            },
+            {
+              "type": "section",
+              "fields": [
+                {
+                  "type": "mrkdwn",
+                  "text.$": "States.Format('*When:*\n{}', $.detail.CarryingPayload.detail.startTime)"
+                }
+              ]
+            },
+            {
+              "type": "divider"
+            },
+            {
+              "type": "section",
+              "fields": [
+                {
+                  "type": "mrkdwn",
+                  "text.$": "States.Format('*Event Details:*\n{}', $.detail.CarryingPayload.detail.eventDescription[0].latestDescription)"
+                }
+              ]
+            },
+            {
+              "type": "actions",
+              "elements": [
+                {
+                  "type": "button",
+                  "text": {
+                    "type": "plain_text",
+                    "text": "Approve Ticket"
+                  },
+                  "url.$": "States.Format('${EventCallbackUrlPlaceholder}?status=SUCCESS&taskToken={}', States.Base64Encode($.detail.TaskToken))",
+                  "style": "primary"
+                },
+                {
+                  "type": "button",
+                  "text": {
+                    "type": "plain_text",
+                    "text": "Reject Ticket"
+                  },
+                  "url.$": "States.Format('${EventCallbackUrlPlaceholder}?status=FAILURE&taskToken={}', States.Base64Encode($.detail.TaskToken))",
+                  "style": "danger"
+                }
+              ]
+            }
+          ]
         },
         "Authentication": {
           "ConnectionArn": "${ConnectionArnPlaceholder}"
+        },
+        "Headers": {
+          "Content-type": "application/json"
         }
       },
       "Retry": [

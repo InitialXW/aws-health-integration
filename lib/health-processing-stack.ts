@@ -23,9 +23,16 @@ export interface HealthProcessingProps extends cdk.StackProps {
   slackMeApiKey: string
   lifecycleEmail: string
   opsEmail: string
+  slackAppVerificationToken: string
+  slackAccessToken: string
 }
 
 export class HealthProcessingStack extends cdk.Stack {
+  public readonly healthEventBucket: s3.IBucket
+  public readonly apiConnection: events.IConnection
+  public readonly restApi: apigw.RestApi
+  public readonly integrationEventBus: events.IEventBus
+
   constructor(scope: Construct, id: string, props: HealthProcessingProps) {
     super(scope, id, props);
 
@@ -75,8 +82,9 @@ export class HealthProcessingStack extends cdk.Stack {
     /******************************************************************************* */
 
     /****************** S3 bucket to hold all AWS Health event records**************** */
-    const healthEventBucket = new s3.Bucket(this, 'HealthEventBucket', {
+    this.healthEventBucket = new s3.Bucket(this, 'HealthEventBucket', {
       bucketName: `aws-health-events-${cdk.Aws.ACCOUNT_ID}-${cdk.Aws.REGION}`,
+      eventBridgeEnabled: true,
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
       removalPolicy: cdk.RemovalPolicy.DESTROY,
       lifecycleRules: [
@@ -101,7 +109,7 @@ export class HealthProcessingStack extends cdk.Stack {
       ]
     });
 
-    healthEventBucket.addToResourcePolicy(
+    this.healthEventBucket.addToResourcePolicy(
       new iam.PolicyStatement({
         effect: iam.Effect.ALLOW,
         principals: [...listOfAcctPrincipals, qsRole],
@@ -114,7 +122,7 @@ export class HealthProcessingStack extends cdk.Stack {
           "s3:PutObject",
           "s3:PutObjectAcl"
         ],
-        resources: [healthEventBucket.arnForObjects("*"), healthEventBucket.bucketArn]
+        resources: [this.healthEventBucket.arnForObjects("*"), this.healthEventBucket.bucketArn]
       }),
     );
     /******************************************************************************* */
@@ -146,13 +154,13 @@ export class HealthProcessingStack extends cdk.Stack {
     /*************************************************************************************** */
 
     /****** Dedicated event bus for AWS Health event processing microservices*************** */
-    const integrationEventBus = new events.EventBus(this, "IntegrationEventBus", {
+    this.integrationEventBus = new events.EventBus(this, "IntegrationEventBus", {
       eventBusName: `${cdk.Stack.of(this).stackName}IntegrationEventBus`,
     })
 
     const cfnEventBusResourcePolicy = new events.CfnEventBusPolicy(this, "EventBusResourcePolicy", {
       statementId: "EventBusResourcePolicy",
-      eventBusName: integrationEventBus.eventBusName,
+      eventBusName: this.integrationEventBus.eventBusName,
       statement:
       {
         "Effect": "Allow",
@@ -162,11 +170,11 @@ export class HealthProcessingStack extends cdk.Stack {
         "Principal": {
           "AWS": props.scopedAccountIds
         },
-        "Resource": integrationEventBus.eventBusArn
+        "Resource": this.integrationEventBus.eventBusArn
       }
     });
 
-    new cdk.CfnOutput(this, "EventLakeBusArn", { value: integrationEventBus.eventBusArn })
+    new cdk.CfnOutput(this, "EventLakeBusArn", { value: this.integrationEventBus.eventBusArn })
     /******************************************************************************* */
 
     /*** AWS Data Firehose to stream events received into S3 bucket data lake*****************/
@@ -186,7 +194,7 @@ export class HealthProcessingStack extends cdk.Stack {
             "s3:ListBucketMultipartUploads",
             "s3:PutObject",
           ],
-          resources: [`${healthEventBucket.bucketArn}`, `${healthEventBucket.bucketArn}/*`],
+          resources: [`${this.healthEventBucket.bucketArn}`, `${this.healthEventBucket.bucketArn}/*`],
         })
       ],
     });
@@ -195,7 +203,7 @@ export class HealthProcessingStack extends cdk.Stack {
 
     const eventLakeFirehose = new kfh.CfnDeliveryStream(this, 'EventLakeFirehose', {
       extendedS3DestinationConfiguration: {
-        bucketArn: healthEventBucket.bucketArn,
+        bucketArn: this.healthEventBucket.bucketArn,
         bufferingHints: {
           intervalInSeconds: 60, //must be <= 900
           sizeInMBs: 64
@@ -244,11 +252,6 @@ export class HealthProcessingStack extends cdk.Stack {
     healthEventProcessingRole.addToPolicy(new iam.PolicyStatement({
       effect: iam.Effect.ALLOW,
       actions: [
-        // "kms:Decrypt",
-        // "kms:ReEncrypt*",
-        // "kms:Encrypt",
-        // "kms:GenerateDataKey*",
-        // "kms:DescribeKey",
         "kms:CreateGrant",
         "states:InvokeHTTPEndpoint",
         "events:RetrieveConnectionCredentials",
@@ -274,13 +277,13 @@ export class HealthProcessingStack extends cdk.Stack {
       }
     })
 
-    const apiConnection = new events.Connection(this, 'ApiConnection', {
+    this.apiConnection = new events.Connection(this, 'ApiConnection', {
       authorization: events.Authorization.apiKey('x-api-key', cdk.SecretValue.secretsManager(apiKeySecret.secretName)),
       description: 'API Connection with API Key x-api-key',
     });
 
     const slackDestination = new events.ApiDestination(this, 'slackDestination', {
-      connection: apiConnection,
+      connection: this.apiConnection,
       httpMethod: events.HttpMethod.POST,
       endpoint: props.slackMeUrl,
       rateLimitPerSecond: 1,
@@ -296,7 +299,7 @@ export class HealthProcessingStack extends cdk.Stack {
     //   removalPolicy: cdk.RemovalPolicy.DESTROY,
     // });
 
-    const restApi = new apigw.RestApi(this, 'RestEndpoints', {
+    this.restApi = new apigw.RestApi(this, 'RestEndpoints', {
       restApiName: `${cdk.Stack.of(this).stackName}-restApi`,
       description: `${cdk.Stack.of(this).stackName} Rest API Gateway`,
       cloudWatchRole: true,
@@ -324,13 +327,54 @@ export class HealthProcessingStack extends cdk.Stack {
     });
     /******************************************************************************* */
 
-    /*** Lambda function to mimic State machine callbacks from integrated services ***/
+
     const lambdaExecutionRole = new iam.Role(this, 'AwsUtilsLambdaRole', {
       roleName: 'AwsUtilsLambdaRole',
       assumedBy: new iam.ServicePrincipal('lambda.amazonaws.com'),
       description: 'IAM role to be assumed by AWS utils functions',
     });
+    lambdaExecutionRole.addToPolicy(new iam.PolicyStatement({
+      effect: iam.Effect.ALLOW,
+      actions: [
+          "kms:CreateGrant",
+          "events:PutEvents"
+      ],
+      resources: ['*']
+  }));
 
+    // ------------------- HandleSlackComm ---------------------
+    const handleSlackCommFunction = new lambda.Function(this, 'HandleSlackComm', {
+      runtime: lambda.Runtime.NODEJS_18_X,
+      code: lambda.Code.fromAsset('lambda/src/.aws-sam/build/HandleSlackCommFunction'),
+      handler: 'app.lambdaHandler',
+      timeout: cdk.Duration.seconds(5),
+      memorySize: 128,
+      architecture: lambda.Architecture.ARM_64,
+      reservedConcurrentExecutions: 1,
+      role: lambdaExecutionRole,
+      tracing: lambda.Tracing.DISABLED,
+      environment: {
+          SLACK_APP_VERIFICATION_TOKEN: props.slackAppVerificationToken,
+          SLACK_ACCESS_TOKEN: props.slackAccessToken,
+          INTEGRATION_EVENT_BUS_NAME: this.integrationEventBus.eventBusName
+      },
+  });
+
+  new logs.LogGroup(this, 'HandleSlackCommLogGroup', {
+      logGroupName: `/aws/lambda/${handleSlackCommFunction.functionName}`,
+      retention: logs.RetentionDays.ONE_WEEK,
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+  });
+
+  const slackCommApi = this.restApi.root.addResource('handle-slack-comm');
+  slackCommApi.addMethod(
+      'POST',
+      new LambdaIntegration(handleSlackCommFunction, { proxy: true }),
+  );
+  new cdk.CfnOutput(this, "HandleSlackCommApiUrl", { value: `${this.restApi.url}handle-slack-comm` })
+  // -------------------------------------------------------
+
+    /*** Lambda function to mimic State machine callbacks from integrated services ***/
     lambdaExecutionRole.addToPolicy(new iam.PolicyStatement({
       effect: iam.Effect.ALLOW,
       actions: [
@@ -362,12 +406,12 @@ export class HealthProcessingStack extends cdk.Stack {
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
 
-    const eventCallbackApi = restApi.root.addResource('event-callback');
+    const eventCallbackApi = this.restApi.root.addResource('event-callback');
     eventCallbackApi.addMethod(
       'GET',
       new LambdaIntegration(eventCallbackFunction, { proxy: true }),
     );
-    new cdk.CfnOutput(this, "EventCallbackApiUrl", { value: `${restApi.url}event-callback` })
+    new cdk.CfnOutput(this, "EventCallbackApiUrl", { value: `${this.restApi.url}event-callback` })
     /******************************************************************************* */
 
     /*** SNS topics to triage email alert to different recipients **** */
@@ -410,10 +454,12 @@ export class HealthProcessingStack extends cdk.Stack {
 
     /********* Main event processing state machine *************************/
     const processingSfn = new sfn.StateMachine(this, 'HealthEventProcessing', {
-      definitionBody: sfn.DefinitionBody.fromString(fs.readFileSync(path.join(__dirname, '../state-machine/processing-flow.asl')).toString().trim()),
+      definitionBody: sfn.DefinitionBody.fromString(fs.readFileSync(path.join(__dirname, '../state-machine/event-processing.asl')).toString().trim()),
       definitionSubstitutions: {
         "HealthEventManagementTablePlaceHolder": healthEventManagementTable.tableName,
-        "HealthProcessingHealthEventBusPlaceholder": integrationEventBus.eventBusName,
+        "HealthProcessingHealthEventBusPlaceholder": this.integrationEventBus.eventBusName,
+        "ConnectionArnPlaceholder": this.apiConnection.connectionArn,
+        "SlackApiEndpointPlaceholder": props.slackMeUrl
       },
       tracingEnabled: false,
       stateMachineType: sfn.StateMachineType.STANDARD,
@@ -422,7 +468,7 @@ export class HealthProcessingStack extends cdk.Stack {
     });
 
     const eventLakeRule = new events.Rule(this, 'EventLakeRule', {
-      eventBus: integrationEventBus,
+      eventBus: this.integrationEventBus,
       eventPattern: {
         // source: [{ prefix: '' }] as any[]
         source: ['aws.health', 'awstest.health']
@@ -435,10 +481,10 @@ export class HealthProcessingStack extends cdk.Stack {
 
     /*** State machine for health event integration microservices *****/
     const integrationSfn = new sfn.StateMachine(this, 'HealthEventIntegration', {
-      definitionBody: sfn.DefinitionBody.fromString(fs.readFileSync(path.join(__dirname, '../state-machine/integration-flow.asl')).toString().trim()),
+      definitionBody: sfn.DefinitionBody.fromString(fs.readFileSync(path.join(__dirname, '../state-machine/ops-integration.asl')).toString().trim()),
       definitionSubstitutions: {
-        "ConnectionArnPlaceholder": apiConnection.connectionArn,
-        "EventCallbackUrlPlaceholder": `${restApi.url}event-callback`,
+        "ConnectionArnPlaceholder": this.apiConnection.connectionArn,
+        "EventCallbackUrlPlaceholder": `${this.restApi.url}event-callback`,
         "SlackApiEndpointPlaceholder": props.slackMeUrl,
         "LifecycleEventTopicArnPlaceholder": lifecycleEventTopic.topicArn,
         "OpsEventTopicArnPlaceholder": opsEventTopic.topicArn
@@ -450,7 +496,7 @@ export class HealthProcessingStack extends cdk.Stack {
     });
 
     const integrationRule = new events.Rule(this, 'IntegrationRule', {
-      eventBus: integrationEventBus,
+      eventBus: this.integrationEventBus,
       eventPattern: {
         source: ['awsutils.healtheventintegration']
       },
@@ -459,5 +505,6 @@ export class HealthProcessingStack extends cdk.Stack {
       targets: [new evtTargets.SfnStateMachine(integrationSfn)]
     });
     /******************************************************************************* */
+
   }
 }

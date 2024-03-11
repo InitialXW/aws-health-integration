@@ -1,21 +1,39 @@
-# Integrate AWS Health Events to Operation
+# Power IT operations by AWS Health events and Gen-AI
 
 - This project is built on AWS and deployable using AWS CDK as IaaC (Infrastructure as code).
-- A working illustration of how AWS Organization Heath featured events can be integrated into your IT operations for automated monitoring, triage, and reporting.
+- A working illustration of how AWS Heath events and gen-AI can be integrated into IT operations to improve resilience and efficiency
 - Can be built further on to integrate with more types of events and other internal/external services of yours.
 - Built fully on serverless and event-driven architecture (EDA) on AWS
 - Cost of running/hosting on AWS should be less than US$5 per month with reasonable amount of events consumed.
+- (Optional) Cost of hosting the AI-augmented stack is subject to consumption of actual queries and size of vector store, please consult [AWS Bedrock pricing](https://aws.amazon.com/bedrock/pricing/) and [AWS OpenSearch pricing](https://aws.amazon.com/opensearch-service/pricing/#Amazon_OpenSearch_Serverless). 
 
 ## Summary of what is contained
 - A health event processing microservice to consume organization health events and an example tracking/triage workflow.
 - A health event integration microservice to manage 3rd party service integration (used Slack as an example but aiming at integration with Jira and ServiceNow).
 - A visualization microservice with an S3 event data lake and AWS Quicksight at its core (QuickSight dashboards is work-in-progress)
+- A knowledge base backed by a serverless vector store with Amazon Bedrock API running on top to provide RAG-based (Retrieval Augmented Generation) gen-AI powered chatbot via Slack as the interface
+- (Under construction) A set of Amazon Bedrock agents that actions on instructions via the operation chatbot
 
 ## Prerequisites
 - At least 1 AWS account with appropriate permissions. The project uses a typical setup of 2 accounts where as 1 is the org admin account and the other is the worker account hosting all the microservices.
-- A Slack channel set up with a workflow to receive messages from webhook. This is optional if you wanted to skip the notification function integrated with Slack.
+- A Slack app and a channel set up with appropriate permissions and event subscriptions to send/receive messages to/from macro services. This is optional if you wanted to skip the notification function integrated with Slack and AI chatbot via Slack.
 - AWS CDK installed on your local environment for stack deployment
 - AWS SAM (Serverless Application Model) and Docker installed on your local environment to build Lambda images
+  
+## Screenshots of Usage
+### Integration to Health events to triage ticket creation/update
+<img src="https://github.com/InitialXW/aws-health-integration/blob/main/screenshot/screenshot1.png"
+  alt="Usage scrrenshot1 by seanxw">
+</p>
+
+### AI-powered operation assistant
+<img src="https://github.com/InitialXW/aws-health-integration/blob/main/screenshot/screenshot2.png"
+  alt="Usage screenshot2 by seanxw">
+</p>
+
+### AI-powered operation agent to take actions (under construction)
+Under construction
+
 
 ## Architecture
 <p align="left">
@@ -31,7 +49,7 @@ cd aws-health-integration
 npm install
 cdk bootstrap aws://<your admin AWS account id>/<region where you Organization is> aws://<your worker AWS account id>/<region where your worker services to be>
 cd lambda/src
-# Depending on your buid environment, you might want o change the arch type to x84 or arm in lambda/src/template.yaml file before build 
+# Depending on your build environment, you might want o change the arch type to x84 or arm in lambda/src/template.yaml file before build 
 sam build --use-container
 cd ../..
 ```
@@ -46,12 +64,17 @@ SLACK_CALL_API_KEY=<assign an random api key to be used when initiating Slack we
 LIFECYCLE_NOTIFY_EMAIL=<an email address to receive the triaged approval requests for lifecycle type of health events>
 OPS_ISSUE_NOTIFY_EMAIL=<an email address to receive the triaged approval requests for operational issue type of health events>
 EVENT_HUB_ARN=arn:aws:events:ap-southeast-2:111222333444:event-bus/HealthProcessingHealthEventBus
+SLACK_APP_VERIFICATION_TOKEN=<replace with your Slack app verification token>
+SLACK_ACCESS_TOKEN=<replace with your Slack access token>
 ```
 ### Deploy worker account stack
 ```zsh
 # deploying processing microservice to your worker account, can be the same account as your admin account
 # ensure you are in project root directory
 cdk deploy HealthProcessingStack
+# below are only required for AI powered macro service, skip if you do not want to incur costs.
+cdk deploy kbStatefulStack
+cdl deploy KbServiceStack
 ```
 ### Replace in .env file the 'EVENT_HUB_ARN' value with the 'HealthProcessingStack.EventLakeBusArn' console output value from previous step
 ### Based on the email addresses provided in step 1, you should have received 2 emails respectively asking to consent to receive notifications, make sure you hit the confirm links in those emails. 

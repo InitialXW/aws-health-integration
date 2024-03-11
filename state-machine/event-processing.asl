@@ -50,9 +50,6 @@
           "StartTime": {
             "S.$": "$.detail.startTime"
           },
-          "EndTime": {
-            "S.$": "$.detail.endTime"
-          },
           "LastUpdatedTime": {
             "S.$": "$.detail.lastUpdatedTime"
           },
@@ -123,7 +120,8 @@
           }
         }
       },
-      "End": true
+      "Next": "ApprovedOrRejected",
+      "ResultPath": "$.TicketAction"
     },
     "UpdateEventItemTicketRejected": {
       "Type": "Task",
@@ -142,6 +140,84 @@
           }
         }
       },
+      "Next": "ApprovedOrRejected",
+      "ResultPath": "$.TicketAction"
+    },
+    "ApprovedOrRejected": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "And": [
+            {
+              "Variable": "$.TaskTokenCallback.Payload",
+              "IsPresent": true
+            },
+            {
+              "Variable": "$.TaskTokenCallback.Payload",
+              "StringEquals": "SUCCESS"
+            }
+          ],
+          "Next": "NotifySuccess"
+        }
+      ],
+      "Default": "NotifyFailure"
+    },
+    "NotifyFailure": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::http:invoke",
+      "Parameters": {
+        "Method": "POST",
+        "RequestBody": {
+          "text": "Ticket creation rejected by operator."
+        },
+        "Authentication": {
+          "ConnectionArn": "${ConnectionArnPlaceholder}"
+        },
+        "Headers": {
+          "Content-type": "application/json"
+        },
+        "ApiEndpoint": "${SlackApiEndpointPlaceholder}"
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "BackoffRate": 2,
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "JitterStrategy": "FULL"
+        }
+      ],
+      "End": true
+    },
+    "NotifySuccess": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::http:invoke",
+      "Parameters": {
+        "Method": "POST",
+        "RequestBody": {
+          "text": "Ticket creation approved by operator."
+        },
+        "Authentication": {
+          "ConnectionArn": "${ConnectionArnPlaceholder}"
+        },
+        "Headers": {
+          "Content-type": "application/json"
+        },
+        "ApiEndpoint": "${SlackApiEndpointPlaceholder}"
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "BackoffRate": 2,
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "JitterStrategy": "FULL"
+        }
+      ],
       "End": true
     },
     "EventUpdate-ToDo": {
