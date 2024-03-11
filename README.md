@@ -37,7 +37,7 @@ Under construction
 
 ## Architecture
 <p align="left">
-<img src="https://github.com/InitialXW/aws-health-integration/blob/main/architecture.png"
+<img src="./architecture.png"
   alt="Archetectural diagram by seanxw">
 </p>
 
