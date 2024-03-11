@@ -22,12 +22,12 @@
   
 ## Screenshots of Usage
 ### Integration to Health events to triage ticket creation/update
-<img src="https://github.com/InitialXW/aws-health-integration/blob/main/screenshot/screenshot1.png"
+<img src="./screenshots/screenshot1.png"
   alt="Usage scrrenshot1 by seanxw">
 </p>
 
 ### AI-powered operation assistant
-<img src="https://github.com/InitialXW/aws-health-integration/blob/main/screenshot/screenshot2.png"
+<img src="./screenshots/screenshot2.png"
   alt="Usage screenshot2 by seanxw">
 </p>
 
