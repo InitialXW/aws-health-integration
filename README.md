@@ -1,7 +1,7 @@
-# Power IT operations by AWS Health events and Gen-AI
+# Power cloud operations by AWS Health events and Gen-AI
 
 - This project is built on AWS and deployable using AWS CDK as IaaC (Infrastructure as code).
-- A working illustration of how AWS Heath events and gen-AI can be integrated into IT operations to improve resilience and efficiency
+- A working illustration of how AWS Heath events and gen-AI can be integrated into cloud operations to improve resilience and efficiency
 - Can be built further on to integrate with more types of events and other internal/external services of yours.
 - Built fully on serverless and event-driven architecture (EDA) on AWS
 - Cost of running/hosting on AWS should be less than US$5 per month with reasonable amount of events consumed.
