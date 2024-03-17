@@ -9,9 +9,90 @@
           "Variable": "$.detail-type",
           "StringEquals": "slackMessageReceived",
           "Next": "RetrieveAndGenerate"
+        },
+        {
+          "Variable": "$.detail-type",
+          "StringEquals": "AgentProxiedMessageReceived",
+          "Next": "GetUserAgentSession"
         }
       ],
       "Default": "IgnoreInvalidRequest"
+    },
+    "GetUserAgentSession": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:getItem",
+      "Parameters": {
+        "TableName": "${ChatUserSessionsTableNamePlaceholder}",
+        "Key": {
+          "PK": {
+            "S.$": "$.detail.event.user"
+          }
+        }
+      },
+      "Next": "UserAgentSessionExists",
+      "ResultPath": "$.GetUserSession"
+    },
+    "UserAgentSessionExists": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.GetUserSession.Item",
+          "IsPresent": true,
+          "Next": "InvokeBedrockAgentWithSession"
+        }
+      ],
+      "Default": "InvokeBedrockAgent"
+    },
+    "InvokeBedrockAgentWithSession": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "Payload.$": "$",
+        "FunctionName": "${InvokeBedRockAgentArnPlaceholder}"
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2
+        }
+      ],
+      "Next": "UpsertUserAgentSession",
+      "ResultPath": "$.KbResponse",
+      "ResultSelector": {
+        "Output.$": "$.Payload.Output",
+        "SessionId.$": "$.Payload.SessionId",
+        "ExpiresAt.$": "$.Payload.ExpiresAt"
+      }
+    },
+    "UpsertUserAgentSession": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:updateItem",
+      "Parameters": {
+        "TableName": "${ChatUserSessionsTableNamePlaceholder}",
+        "Key": {
+          "PK": {
+            "S.$": "$.detail.event.user"
+          }
+        },
+        "UpdateExpression": "SET expiresAt = :expiresAtValueRef, AgentSessionID = :AgentSessionIDValueRef",
+        "ExpressionAttributeValues": {
+          ":expiresAtValueRef": {
+            "S.$": "$.KbResponse.ExpiresAt"
+          },
+          ":AgentSessionIDValueRef": {
+            "S.$": "$.KbResponse.SessionId"
+          }
+        }
+      },
+      "Next": "ValidateResponse",
+      "ResultPath": "$.PutUserSession"
     },
     "IgnoreInvalidRequest": {
       "Type": "Pass",
@@ -19,6 +100,57 @@
         "SlackMessage.$": "$.detail.event.text"
       },
       "Next": "Finished"
+    },
+    "InvokeBedrockAgent": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "Payload.$": "$",
+        "FunctionName": "${InvokeBedRockAgentArnPlaceholder}"
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2
+        }
+      ],
+      "Next": "PutUserAgentSession",
+      "ResultPath": "$.KbResponse",
+      "ResultSelector": {
+        "Output.$": "$.Payload.Output",
+        "SessionId.$": "$.Payload.SessionId",
+        "ExpiresAt.$": "$.Payload.ExpiresAt"
+      }
+    },
+    "PutUserAgentSession": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:putItem",
+      "Parameters": {
+        "TableName": "${ChatUserSessionsTableNamePlaceholder}",
+        "Item": {
+          "PK": {
+            "S.$": "$.detail.event.user"
+          },
+          "AgentSessionID": {
+            "S.$": "$.KbResponse.SessionId"
+          },
+          "AgentSessionStart": {
+            "S.$": "$$.State.EnteredTime"
+          },
+          "expiresAt": {
+            "N.$": "$.KbResponse.ExpiresAt"
+          }
+        }
+      },
+      "Next": "ValidateResponse",
+      "ResultPath": "$.PutUserSession"
     },
     "RetrieveAndGenerate": {
       "Type": "Task",
@@ -42,7 +174,7 @@
       "Type": "Choice",
       "Choices": [
         {
-          "Variable": "$.KbResponse.Citations[0].GeneratedResponsePart",
+          "Variable": "$.KbResponse.Output.Text",
           "IsPresent": true,
           "Next": "SlackBack"
         }
@@ -95,7 +227,7 @@
       "Parameters": {
         "Method": "POST",
         "RequestBody": {
-          "text.$": "$.KbResponse.Citations[0].GeneratedResponsePart.TextResponsePart.Text",
+          "text.$": "$.KbResponse.Output.Text",
           "thread_ts.$": "$.detail.event.ts"
         },
         "Authentication": {

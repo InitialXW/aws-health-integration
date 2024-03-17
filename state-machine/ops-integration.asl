@@ -1,5 +1,5 @@
 {
-  "Comment": "AWS Health event integration logics",
+  "Comment": "AWS Health event integration with other toolings",
   "StartAt": "SnsTriageChoice",
   "States": {
     "SnsTriageChoice": {
@@ -83,12 +83,10 @@
             },
             {
               "type": "section",
-              "fields": [
-                {
-                  "type": "mrkdwn",
-                  "text.$": "States.Format('*Event Details:*\n{}', $.detail.CarryingPayload.detail.eventDescription[0].latestDescription)"
-                }
-              ]
+              "text": {
+                "text.$": "States.Format('*Event Details:*\n{}', $.detail.CarryingPayload.detail.eventDescription[0].latestDescription)",
+                "type": "mrkdwn"
+              }
             },
             {
               "type": "actions",

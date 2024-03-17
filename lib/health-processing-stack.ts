@@ -32,6 +32,7 @@ export class HealthProcessingStack extends cdk.Stack {
   public readonly apiConnection: events.IConnection
   public readonly restApi: apigw.RestApi
   public readonly integrationEventBus: events.IEventBus
+  public readonly healthEventManagementTable: dynamodb.ITable
 
   constructor(scope: Construct, id: string, props: HealthProcessingProps) {
     super(scope, id, props);
@@ -128,7 +129,7 @@ export class HealthProcessingStack extends cdk.Stack {
     /******************************************************************************* */
 
     /******************* DynamoDB Table to track event integrated task status *****************/
-    const healthEventManagementTable = new dynamodb.Table(this, 'HealthEventManagementTable', {
+    this.healthEventManagementTable = new dynamodb.Table(this, 'HealthEventManagementTable', {
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
       // tableName: 'HealthEventManagementTable',
       // billingMode: dynamodb.BillingMode.PROVISIONED,
@@ -150,7 +151,7 @@ export class HealthProcessingStack extends cdk.Stack {
     //     sortKey: { name: 'status', type: dynamodb.AttributeType.STRING },
     //     projectionType: dynamodb.ProjectionType.ALL,
     // });
-    new cdk.CfnOutput(this, "HealthEventManagementTableName", { value: healthEventManagementTable.tableName })
+    new cdk.CfnOutput(this, "HealthEventManagementTableName", { value: this.healthEventManagementTable.tableName })
     /*************************************************************************************** */
 
     /****** Dedicated event bus for AWS Health event processing microservices*************** */
@@ -456,7 +457,7 @@ export class HealthProcessingStack extends cdk.Stack {
     const processingSfn = new sfn.StateMachine(this, 'HealthEventProcessing', {
       definitionBody: sfn.DefinitionBody.fromString(fs.readFileSync(path.join(__dirname, '../state-machine/event-processing.asl')).toString().trim()),
       definitionSubstitutions: {
-        "HealthEventManagementTablePlaceHolder": healthEventManagementTable.tableName,
+        "HealthEventManagementTablePlaceHolder": this.healthEventManagementTable.tableName,
         "HealthProcessingHealthEventBusPlaceholder": this.integrationEventBus.eventBusName,
         "ConnectionArnPlaceholder": this.apiConnection.connectionArn,
         "SlackApiEndpointPlaceholder": props.slackMeUrl

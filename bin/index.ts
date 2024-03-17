@@ -35,7 +35,8 @@ const healthProcessingStack = new HealthProcessingStack(app, 'HealthProcessingSt
   slackAccessToken: process.env.SLACK_ACCESS_TOKEN as string,
 });
 
-new HealthOrgStack(app, 'HealthOrgStack', {
+/* ------  Admin account setup, make sure you cover all regions your organization has footprint in */
+new HealthOrgStack(app, 'HealthOrgStackUsEast1', {
   stackName: `HealthOrg`,
   tags: {
     env: 'prod',
@@ -45,10 +46,41 @@ new HealthOrgStack(app, 'HealthOrgStack', {
   },
   env: {
     account: process.env.CDK_ADMIN_ACCOUNT,
-    region: process.env.CDK_ADMIN_REGION,
+    region: 'us-east-1',
   },
   healthEventBusArn: process.env.EVENT_HUB_ARN as string
 });
+
+new HealthOrgStack(app, 'HealthOrgStackUsWest2', {
+  stackName: `HealthOrg`,
+  tags: {
+    env: 'prod',
+    "ManagedBy": 'HealthOrgStack',
+    "auto-delete": "no"
+
+  },
+  env: {
+    account: process.env.CDK_ADMIN_ACCOUNT,
+    region: 'us-west-2',
+  },
+  healthEventBusArn: process.env.EVENT_HUB_ARN as string
+});
+
+new HealthOrgStack(app, 'HealthOrgStackApSoutheast2', {
+  stackName: `HealthOrg`,
+  tags: {
+    env: 'prod',
+    "ManagedBy": 'HealthOrgStack',
+    "auto-delete": "no"
+
+  },
+  env: {
+    account: process.env.CDK_ADMIN_ACCOUNT,
+    region: 'ap-southeast-2',
+  },
+  healthEventBusArn: process.env.EVENT_HUB_ARN as string
+});
+/********************************************************************** */
 
 const kbStatefulStack = new KbStatefulStack(app, 'KbStatefulStack', {
   stackName: `KbStatefulStack`,
@@ -62,7 +94,8 @@ const kbStatefulStack = new KbStatefulStack(app, 'KbStatefulStack', {
     account: process.env.CDK_PROCESSING_ACCOUNT,
     region: process.env.CDK_PROCESSING_REGION,
   },
-  scopedAccountIds: scopedAccountIds
+  scopedAccountIds: scopedAccountIds,
+  healthEventManagementTableName: healthProcessingStack.healthEventManagementTable.tableName
 });
 
 new KbServiceStack(app, 'KbServiceStack', {
@@ -87,4 +120,5 @@ new KbServiceStack(app, 'KbServiceStack', {
   knowledgeBaseArn: kbStatefulStack.knowledgeBase.knowledgeBaseArn,
   knowledgeBaseId: kbStatefulStack.knowledgeBase.knowledgeBaseId,
   dataSourceId: kbStatefulStack.dataSource.dataSourceId,
+  invokeAgentFunctionArn: kbStatefulStack.invokeAgentFunction.functionArn
 });

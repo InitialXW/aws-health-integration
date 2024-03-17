@@ -58,6 +58,9 @@
           },
           "EventDescription": {
             "S.$": "$.detail.eventDescription[0].latestDescription"
+          },
+          "EvenActionStatus": {
+            "S": "New"
           }
         }
       },

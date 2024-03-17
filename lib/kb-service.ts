@@ -6,6 +6,7 @@ import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as logs from 'aws-cdk-lib/aws-logs';
 import * as events from "aws-cdk-lib/aws-events";
 import * as s3 from 'aws-cdk-lib/aws-s3';
+import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as sqs from 'aws-cdk-lib/aws-sqs';
 import { SqsEventSource } from 'aws-cdk-lib/aws-lambda-event-sources';
 import * as evtTargets from "aws-cdk-lib/aws-events-targets";
@@ -25,6 +26,7 @@ export interface KbServiceProps extends cdk.StackProps {
   knowledgeBaseArn: string
   knowledgeBaseId: string
   dataSourceId: string
+  invokeAgentFunctionArn: string
 }
 
 export class KbServiceStack extends cdk.Stack {
@@ -32,6 +34,24 @@ export class KbServiceStack extends cdk.Stack {
 
   constructor(scope: Construct, id: string, props: KbServiceProps) {
     super(scope, id, props);
+
+    /******************* DynamoDB Table to manage user chat sessions *****************/
+    const chatUserSessionsTable = new dynamodb.Table(this, 'ChatUserSessionsTable', {
+      billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+      // tableName: 'ChatUserSessionsTable',
+      // billingMode: dynamodb.BillingMode.PROVISIONED,
+      // readCapacity: 1,
+      // writeCapacity: 1,
+      pointInTimeRecovery: true,
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+      partitionKey: {
+        name: "PK",
+        type: dynamodb.AttributeType.STRING
+      },
+      timeToLiveAttribute: "expiresAt"
+    });
+    new cdk.CfnOutput(this, "ChatUserSessionsTableName", { value: chatUserSessionsTable.tableName })
+    /*************************************************************************************** */
 
     // --------- Convert JSON events to txt and save to knowledge base data source function---------------
     const processFileDlq = new sqs.Queue(this, 'ProcessFileDlq', {
@@ -210,7 +230,9 @@ export class KbServiceStack extends cdk.Stack {
       definitionSubstitutions: {
         "ConnectionArnPlaceholder": props.connectionArn,
         "SlackApiEndpointPlaceholder": props.slackMeUrl,
-        "KnowledgeBaseIdPlaceHolder": props.knowledgeBaseId
+        "KnowledgeBaseIdPlaceHolder": props.knowledgeBaseId,
+        "InvokeBedRockAgentArnPlaceholder": props.invokeAgentFunctionArn,
+        "ChatUserSessionsTableNamePlaceholder": chatUserSessionsTable.tableName
       },
       tracingEnabled: false,
       stateMachineType: sfn.StateMachineType.STANDARD,

@@ -52,13 +52,21 @@ const dispatchRequest = async (requestParams: any): Promise<ApiGwResponse> => {
     console.log(`Could not cleanup Slack payload: `, JSON.stringify(requestParams));
     throw err;
   }
+  /* strip any leading spaces and then get the leading 6 chars of the string */
+  const parsedMessageType = requestParams.event.text.trim().slice(0, 6);
+  let detailType = 'slackMessageReceived'
+  if (parsedMessageType === '@agent') {
+    detailType = 'AgentProxiedMessageReceived'
+    requestParams.event.text = requestParams.event.text.replace(`@agent`, '')
+  }
+
   const putEventsCommand = new PutEventsCommand({
     Entries: [
       {
         Time: new Date("TIMESTAMP"),
         Source: "awsutils.slackintegration",
         Resources: [],
-        DetailType: "slackMessageReceived",
+        DetailType: detailType,
         Detail: JSON.stringify(requestParams),
         EventBusName: process.env.INTEGRATION_EVENT_BUS_NAME as string,
         TraceHeader: process.env.AWS_LAMBDA_FUNCTION_NAME as string,

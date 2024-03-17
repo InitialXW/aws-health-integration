@@ -5,18 +5,19 @@
 - Can be built further on to integrate with more types of events and other internal/external services of yours.
 - Built fully on serverless and event-driven architecture (EDA) on AWS
 - Cost of running/hosting on AWS should be less than US$5 per month with reasonable amount of events consumed.
-- (Optional) Cost of hosting the AI-augmented stack is subject to consumption of actual queries and size of vector store, please consult [AWS Bedrock pricing](https://aws.amazon.com/bedrock/pricing/) and [AWS OpenSearch pricing](https://aws.amazon.com/opensearch-service/pricing/#Amazon_OpenSearch_Serverless). 
+- (Optional) Cost of hosting the AI-augmented stack is subject to the actual consumption of queries and the size of vector store, please consult [AWS Bedrock pricing](https://aws.amazon.com/bedrock/pricing/) and [AWS OpenSearch pricing](https://aws.amazon.com/opensearch-service/pricing/#Amazon_OpenSearch_Serverless) for pricing details. 
 
 ## Summary of what is contained
-- A health event processing microservice to consume organization health events and an example tracking/triage workflow.
-- A health event integration microservice to manage 3rd party service integration (used Slack as an example but aiming at integration with Jira and ServiceNow).
-- A visualization microservice with an S3 event data lake and AWS Quicksight at its core (QuickSight dashboards is work-in-progress)
+- An AWS Health event processing microservice to consume organization health events and an example tracking/triage workflow.
+- A health event integration microservice to manage 3rd party service integrations (used Slack and Amazon DynamoDB as example but can be extended to integrate with Jira and ServiceNow via free plugins from AWS Marketplace).
+- A visualization microservice with an S3 event data lake and AWS Quicksight at its core (QuickSight BI dashboards is work-in-progress)
 - A knowledge base backed by a serverless vector store with Amazon Bedrock API running on top to provide RAG-based (Retrieval Augmented Generation) gen-AI powered chatbot via Slack as the interface
-- (Under construction) A set of Amazon Bedrock agents that actions on instructions via the operation chatbot
+- A chatbot using Slack as the UI to interact with the backend gen-AI features, similar functionalities can be implemented on MS TEAMS.
+- An Amazon Bedrock agent that actions on instructions via the operation chatbot
 
 ## Prerequisites
 - At least 1 AWS account with appropriate permissions. The project uses a typical setup of 2 accounts where as 1 is the org admin account and the other is the worker account hosting all the microservices.
-- A Slack app and a channel set up with appropriate permissions and event subscriptions to send/receive messages to/from macro services. This is optional if you wanted to skip the notification function integrated with Slack and AI chatbot via Slack.
+- A Slack app and a channel set up with appropriate permissions and event subscriptions to send/receive messages to/from backend microservices. This is optional if you wanted to skip the notification function integrated with Slack and AI chatbot related features.
 - AWS CDK installed on your local environment for stack deployment
 - AWS SAM (Serverless Application Model) and Docker installed on your local environment to build Lambda images
   
@@ -31,9 +32,10 @@
   alt="Usage screenshot2 by seanxw">
 </p>
 
-### AI-powered operation agent to take actions (under construction)
-Under construction
-
+### AI-powered operation agent to take actions
+<img src="./screenshots/screenshot3.png"
+  alt="Usage screenshot3 by seanxw">
+</p>
 
 ## Architecture
 <p align="left">
@@ -72,7 +74,7 @@ SLACK_ACCESS_TOKEN=<replace with your Slack access token>
 # deploying processing microservice to your worker account, can be the same account as your admin account
 # ensure you are in project root directory
 cdk deploy HealthProcessingStack
-# below are only required for AI powered macro service, skip if you do not want to incur costs.
+# below are only required for AI powered microservice, skip if you do not want to incur costs.
 cdk deploy kbStatefulStack
 cdl deploy KbServiceStack
 ```
@@ -83,7 +85,7 @@ cdl deploy KbServiceStack
 cdk deploy HealthOrgStack
 ```
 ## Testing out
-### Go to EventBridge console in your chosen admin account, ensure you are in the right region, go to'Event buses' and firing off the below test event that mimic a real Health event. You should receive Slack messages for notification and approval request emails.
+### Go to EventBridge console in your chosen admin account, ensure you are in the right region, go to'Event buses' and fire off the below test event that mimic a real Health event. You should receive Slack messages for notification and approval request emails. Then start chatting with your assistant about the test events.
 Test event 1 (a lifecycle event)
 ```json
 {

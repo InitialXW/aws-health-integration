@@ -1,0 +1,112 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Operation ticket management API for Hyper-Conn app",
+    "version": "1.0.0",
+    "description": "Operation ticket management API for Hyper-Conn app"
+  },
+  "paths": {
+    "/test": {
+      "get": {
+        "summary": "Get test result with a test argument.",
+        "description": "Get test result with a test argument.",
+        "operationId": "TestArgument",
+        "parameters": [
+          {
+            "name": "testArg",
+            "in": "path",
+            "description": "Argument for test",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "test successful"
+          }
+        }
+      }
+    },
+    "/list-tickets": {
+      "get": {
+        "summary": "Get a list of all tickets for a given event ARN",
+        "description": "Get a list of all tickets for a given event ARN",
+        "operationId": "ListTickets",
+        "parameters": [
+          {
+            "name": "eventArn",
+            "in": "path",
+            "description": "ARN of the event",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Get a list of all tickets for a given event ARN, start time, affected account id, or action status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "PK": {
+                        "type": "string",
+                        "description": "Unique ID of the ticket which is constructed by the event ARN and affected account id with '~' in between."
+                      },
+                      "EventTypeCode": {
+                        "type": "string",
+                        "description": "The type of event"
+                      },
+                      "EventStatusCode": {
+                        "type": "string",
+                        "description": "The status of the event"
+                      },
+                      "CommunicationId": {
+                        "type": "string",
+                        "description": "The unique communication id about the event"
+                      },
+                      "StartTime": {
+                        "type": "string",
+                        "description": "The impact start time of the event"
+                      },
+                      "LastUpdatedTime": {
+                        "type": "string",
+                        "description": "The last time when event details were updated"
+                      },
+                      "StatusCode": {
+                        "type": "string",
+                        "description": "The status of the event"
+                      },
+                      "EventDescription": {
+                        "type": "string",
+                        "description": "The detailed description of the event"
+                      },
+                      "EvenActionStatus": {
+                        "type": "string",
+                        "description": "The status of the actions taken against the event"
+                      },
+                      "TicketCreatedAt": {
+                        "type": "string",
+                        "description": "The time when the ticket was created"
+                      },
+                      "TicketRejectedAt": {
+                        "type": "string",
+                        "description": "The last time when the ticket was rejected"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
