@@ -6,25 +6,52 @@
     "description": "Operation ticket management API for Hyper-Conn app"
   },
   "paths": {
-    "/test": {
-      "get": {
-        "summary": "Get test result with a test argument.",
-        "description": "Get test result with a test argument.",
-        "operationId": "TestArgument",
-        "parameters": [
-          {
-            "name": "testArg",
-            "in": "path",
-            "description": "Argument for test",
-            "required": true,
-            "schema": {
-              "type": "string"
+    "/ask-tam": {
+      "post": {
+        "summary": "A TAM consultant for any questions about events or operational issues. TAM knows all details about a given event or issue, including eventArn, actions needed, status, start date, and etc.",
+        "description": "A TAM consultant for any questions about events or operational issues. TAM knows all details about a given event or issue, including event ARN, actions needed, status, start date, and etc.",
+        "operationId": "ask-tam",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "question": {
+                    "type": "string",
+                    "description": "content of the question"
+                  }
+                },
+                "required": [
+                  "question"
+                ]
+              }
             }
           }
-        ],
+        },
         "responses": {
           "200": {
-            "description": "test successful"
+            "description": "Answers to the question asked based on event knowledge base.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "Output": {
+                      "type": "object",
+                      "properties": {
+                        "Text": {
+                          "type": "string",
+                          "description": "Answers to the question asked based on event knowledge base."
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }

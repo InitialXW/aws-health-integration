@@ -135,6 +135,8 @@ Resources:
       Environment:
         Variables:
           TICKET_TABLE: "string"
+          KB_ID: "string"
+          LLM_MODEL_ARN: "string"
     Metadata:
       BuildMethod: esbuild
       BuildProperties:

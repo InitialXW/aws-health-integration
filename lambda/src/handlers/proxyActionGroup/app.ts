@@ -1,6 +1,12 @@
 import { STSClient, GetCallerIdentityCommand } from "@aws-sdk/client-sts"
 import { fromNodeProviderChain } from "@aws-sdk/credential-providers";
 import { DynamoDBClient, ScanCommand } from "@aws-sdk/client-dynamodb";
+import {
+  BedrockAgentRuntimeClient,
+  RetrieveAndGenerateCommand,
+  RetrieveAndGenerateCommandInput,
+  RetrieveAndGenerateCommandOutput,
+} from '@aws-sdk/client-bedrock-agent-runtime';
 
 interface ActionGroupEvent {
   messageVersion: string;
@@ -54,8 +60,7 @@ interface ActionGroupResponse {
 
 let credentialProvider = fromNodeProviderChain({})
 const table = new DynamoDBClient({ credentials: credentialProvider })
-const sts = new STSClient({ credentials: credentialProvider });
-const getCallerIdentityCommand = new GetCallerIdentityCommand({});
+const bedrockAgent = new BedrockAgentRuntimeClient();
 
 // Lambda handler
 export const lambdaHandler = async (event: ActionGroupEvent): Promise<ActionGroupResponse> => {
@@ -84,9 +89,24 @@ export const lambdaHandler = async (event: ActionGroupEvent): Promise<ActionGrou
       body = JSON.stringify(response)
       break;
 
-    case '/test':
-      console.log('Test argument value is: ', event.parameters[0].value)
-      body = 'test succeeded.'
+    case '/ask-tam':
+      const input: RetrieveAndGenerateCommandInput = {
+        input: {
+          text: event.requestBody.content['application/json'].properties[0].value,
+        },
+        retrieveAndGenerateConfiguration: {
+          type: 'KNOWLEDGE_BASE',
+          knowledgeBaseConfiguration: {
+            knowledgeBaseId: process.env.KB_ID,
+            modelArn: process.env.LLM_MODEL_ARN,
+          },
+        },
+      };
+      const ragCommand: RetrieveAndGenerateCommand = new RetrieveAndGenerateCommand(
+        input
+      );
+      const ragResponse: RetrieveAndGenerateCommandOutput = await bedrockAgent.send(ragCommand);
+      body = ragResponse.output?.text as string;
       break;
 
     default:
@@ -94,7 +114,7 @@ export const lambdaHandler = async (event: ActionGroupEvent): Promise<ActionGrou
       body = 'Sorry I am unable to help you with that. Please try rephrase your questions';
       break;
   }
-
+  console.log('The response body is:', JSON.stringify(body))
   return {
     messageVersion: event.messageVersion,
     response: {

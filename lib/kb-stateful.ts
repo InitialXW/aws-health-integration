@@ -5,6 +5,7 @@ import * as logs from 'aws-cdk-lib/aws-logs';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import { bedrock } from '@cdklabs/generative-ai-cdk-constructs';
 import { Construct } from 'constructs';
+import * as fs from 'fs';
 
 import * as path from "path";
 
@@ -90,6 +91,38 @@ export class KbStatefulStack extends cdk.Stack {
       knowledgeBases: [this.knowledgeBase],
       shouldPrepareAgent: false,
       aliasName: 'HyperConnAgent',
+      promptOverrideConfiguration: {
+        promptConfigurations: [
+          {
+            promptType: bedrock.PromptType.PRE_PROCESSING,
+            inferenceConfiguration: {
+              temperature: 0,
+              topP: 1,
+              topK: 250,
+              stopSequences: ['\n\nHuman:'],
+              maximumLength: 2048,
+            },
+            promptCreationMode: bedrock.PromptCreationMode.OVERRIDDEN,
+            promptState: bedrock.PromptState.ENABLED,
+            basePromptTemplate: fs.readFileSync(path.join(__dirname, '../prompt-templates/preprocessing.xml')).toString(),
+            parserMode: bedrock.ParserMode.DEFAULT
+          },
+          {
+            promptType: bedrock.PromptType.ORCHESTRATION,
+            inferenceConfiguration: {
+              temperature: 0,
+              topP: 1,
+              topK: 250,
+              stopSequences: ['</function_call>','</answer>','</error>'],
+              maximumLength: 2048,
+            },
+            promptCreationMode: bedrock.PromptCreationMode.OVERRIDDEN,
+            promptState: bedrock.PromptState.ENABLED,
+            basePromptTemplate: fs.readFileSync(path.join(__dirname, '../prompt-templates/orchestration.xml')).toString(),
+            parserMode: bedrock.ParserMode.DEFAULT
+          }
+        ]
+      }
     });
 
     /*** Bedrock agent and agent action groups **************/
@@ -137,7 +170,9 @@ export class KbStatefulStack extends cdk.Stack {
       architecture: lambda.Architecture.ARM_64,
       reservedConcurrentExecutions: 1,
       environment: {
-        "TICKET_TABLE": props.healthEventManagementTableName
+        "TICKET_TABLE": props.healthEventManagementTableName,
+        "KB_ID": this.knowledgeBase.knowledgeBaseId,
+        "LLM_MODEL_ARN": `arn:aws:bedrock:${cdk.Aws.REGION}::foundation-model/anthropic.claude-v2`
       },
     });
 
@@ -151,9 +186,11 @@ export class KbStatefulStack extends cdk.Stack {
       actions: [
         "bedrock:InvokeAgent",
         "bedrock:RetrieveAndGenerate",
+        "bedrock:Retrieve",
+        "bedrock:InvokeModel",
         "dynamodb:*"
       ],
-      resources: [agent.agentArn, 'arn:aws:dynamodb:*'],
+      resources: [agent.agentArn, this.knowledgeBase.knowledgeBaseArn, `arn:aws:bedrock:${cdk.Aws.REGION}::foundation-model/anthropic.claude-v2`, 'arn:aws:dynamodb:*'],
       effect: cdk.aws_iam.Effect.ALLOW
     });
 
