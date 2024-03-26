@@ -8,8 +8,8 @@
   "paths": {
     "/ask-tam": {
       "post": {
-        "summary": "A TAM consultant for any questions about events or operational issues. TAM knows all details about a given event or issue, including eventArn, actions needed, status, start date, and etc.",
-        "description": "A TAM consultant for any questions about events or operational issues. TAM knows all details about a given event or issue, including event ARN, actions needed, status, start date, and etc.",
+        "summary": "A TAM consultant for any questions about events or operational issues. TAM knows all details about a given event or issue, including eventArn, actions needed for the event, event status, event action status, event start date, affected accounts, and etc. But TAM consultant does not have any knowledge or information about tickets.",
+        "description": "A TAM consultant for any questions about events or operational issues. TAM knows all details about a given event or issue, including eventArn, actions needed for the event, event status, event action status, event start date, affected accounts, and etc. But TAM consultant does not have any knowledge or information about tickets.",
         "operationId": "ask-tam",
         "parameters": [],
         "requestBody": {
@@ -65,7 +65,7 @@
           {
             "name": "eventArn",
             "in": "path",
-            "description": "ARN of the event",
+            "description": "eventArn of the event, the eventArn needs to be reformatted so that it contains only the substring of the original eventArn that comes after the 2 consecutive colon symbols. If there is no 2 consecutive colon symbols in the original eventArn, use the original format instead.",
             "required": true,
             "schema": {
               "type": "string"

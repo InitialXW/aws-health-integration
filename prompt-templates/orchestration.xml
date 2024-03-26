@@ -104,7 +104,7 @@ Here are some examples of correct action by other, different agents with access 
             <function>
                 <function_name>get::hyper-conn-action-group::ListTickets</function_name>
                 <function_description>Get the list of tickets for the specified event ARN. The API takes in an event ARN and returns the list of tickets (i.e. a list of PK, event action status, event type code, and etc.).</function_description>
-                <required_argument>eventArn (string): The event ARN of the event with which the tickets are associated and need to be listed</required_argument>
+                <required_argument>eventArn (string): The reformatted event ARN of the event with which the tickets are associated and need to be listed. A reformatted eventArn is the substring after the 2 consecutive colons in the original eventArn.</required_argument>
                 <returns>object: Successful response</returns>
                 <raises>object: Invalid request</raises>
             </function>
@@ -112,7 +112,7 @@ Here are some examples of correct action by other, different agents with access 
                 <function_name>post::hyper-conn-action-group::ask-tam</function_name>
                 <function_description>This is a search tool that provides information about events or operational issues. It has information about events, issues, and other relevant information</function_description>
                 <required_argument>question(string): A full sentence query that is fed to the search tool</required_argument>
-                <returns>Returns string  related to the user query asked.</returns>
+                <returns>Returns string related to the user query asked.</returns>
             </function>
             $ask_user_function$
         </functions>
@@ -123,15 +123,16 @@ Here are some examples of correct action by other, different agents with access 
             1. I do not have knowledge to tickets, so I should see if I can use any of the available functions to help. I have been equipped with get::hyper-conn-action-group::ListTickets that gets the list of tickets for a given eventArn.
             2. I cannot directly use get::hyper-conn-action-group::ListTickets function as I do not have knowledge to the required argument of eventArn, so I should see if I can use any of the available functions to help. I have been equipped with post::hyper-conn-action-group::ask-tam function that gets the details about any events or operational issues.
             3. I will use the post::hyper-conn-action-group::ask-tam function with the question as the argument to ask specificly about the eventArns.
-            4. Use the returned answer in step 3 to interpret what eventArn values are involved.
-            5. Use iteratively the involved eventArn's from step 4 as arguments to call get::hyper-conn-action-group::ListTickets function to get the lists of tickets associated with the eventArns.
-            6. Use the returned list of tickets in step 5 to get the action status details and then use that to answer the user.
+            4. If the user's question is not related to tickets, I should stop here and return the answer from step 3 to user, otherwise use the returned answer in step 3 to interpret what eventArn values are involved.
+            5. For each eventArn found from step 4, I must reformat it by taking the substring after the 2 consecutive colons in the eventArn.
+            6. Use iteratively the reformatted eventArns from step 5 as arguments to call get::hyper-conn-action-group::ListTickets function to get the lists of tickets associated with the eventArns.
+            6. Use the returned list of tickets in step 6 to get the action status details and then use that to answer the user.
             I have checked that I have access to the post::hyper-conn-action-group::ask-tam and get::hyper-conn-action-group::ListTickets functions.
         </scratchpad>
         <function_call>post::hyper-conn-action-group::ask-tam(question="What are the eventArns related to XXX?")</function_call>
         <function_result>{response: "The eventArn related to XXX is: arn:aws:health:global::event/IAM/AWS_XXX_OPERATIONAL_ISSUE/AWS_XXX_OPERATIONAL_ISSUE_17420_186FEFE5CFE"}</function_result>
         <scratchpad>
-            By interpreting the text response and extract the eventArn values, I have found that there is 1 eventArn for XXX event that is arn:aws:health:global::event/IAM/AWS_XXX_OPERATIONAL_ISSUE/AWS_XXX_OPERATIONAL_ISSUE_17420_186FEFE5CFE. I will now reformat the eventArn by taking the substring after the 2 consecutive colons in the eventArn, and use the reformated eventArn as the eventArn argument to call the get::hyper-conn-action-group::ListTickets function to find associated tickets.
+            By interpreting the text response and extract the eventArn values, I have found that there is 1 eventArn for XXX event that is arn:aws:health:global::event/IAM/AWS_XXX_OPERATIONAL_ISSUE/AWS_XXX_OPERATIONAL_ISSUE_17420_186FEFE5CFE. I must reformat the eventArn by taking the substring after the 2 consecutive colons in the eventArn, and I must use the reformated eventArn as the eventArn argument to call the get::hyper-conn-action-group::ListTickets function to find associated tickets.
         </scratchpad>
         <function_call>get::hyper-conn-action-group::ListTickets(eventArn="event/IAM/AWS_XXX_OPERATIONAL_ISSUE/AWS_XXX_OPERATIONAL_ISSUE_17420_186FEFE5CFE")</function_call>
         <function_result>{response: [{PK: "event/IAM/AWS_XXX_OPERATIONAL_ISSUE/AWS_XXX_OPERATIONAL_ISSUE_17420_186FEFE5CFE", EvenActionStatus: "New"}]}</function_result>
