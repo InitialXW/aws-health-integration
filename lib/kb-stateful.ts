@@ -19,7 +19,8 @@ export class KbStatefulStack extends cdk.Stack {
   public readonly dataSource: bedrock.S3DataSource
   public readonly knowledgeBase: bedrock.KnowledgeBase
   public readonly invokeAgentFunction: lambda.IFunction
-  public readonly proxyActionGroupFunction: lambda.IFunction
+  public readonly opsActionGroupFunction: lambda.IFunction
+  public readonly tamActionGroupFunction: lambda.IFunction
 
   constructor(scope: Construct, id: string, props: KbStatefulProps) {
     super(scope, id, props);
@@ -54,7 +55,7 @@ export class KbStatefulStack extends cdk.Stack {
 
     this.knowledgeBase = new bedrock.KnowledgeBase(this, 'BedrockKnowledgeBase', {
       embeddingsModel: bedrock.BedrockFoundationModel.TITAN_EMBED_TEXT_V1,
-      instruction: `Try this knowledge base first to answer questions.`,
+      instruction: `Use this knowledge base answer questions about operational events, issues, and lifecycle notifications.`,
     });
 
     this.dataSource = new bedrock.S3DataSource(this, 'DataSource', {
@@ -81,16 +82,16 @@ export class KbStatefulStack extends cdk.Stack {
       exportName: 'KnowledgeBaseArnOutput',
     });
 
-    const agent = new bedrock.Agent(this, 'HyperConnAgent', {
-      name: 'HyperConnAgent',
-      description: 'The agent for taking operational actions.',
+    const tamAgent = new bedrock.Agent(this, 'TamAgent', {
+      name: 'TamAgent',
+      description: 'The agent for consultation on operational events, issues.',
       foundationModel: bedrock.BedrockFoundationModel.ANTHROPIC_CLAUDE_V2,
       instruction:
-        'You are a cloud operations assistant that answers questions. You should first try search in your knowledge base to generate answers and then try appropriate actions in your action groups if the knowledge base does not have the answer. For any given event in your knowledge base, there may or may not be a ticket record, you can use actions available from your action groups to find out details about tickets.',
+        'You are an AWS Technical Account Manager (TAM) that provides details or advices related to operational events, issues, and notifications.',
       idleSessionTTL: cdk.Duration.minutes(15),
       knowledgeBases: [this.knowledgeBase],
       shouldPrepareAgent: false,
-      aliasName: 'HyperConnAgent',
+      aliasName: 'TamAgent',
       promptOverrideConfiguration: {
         promptConfigurations: [
           {
@@ -104,7 +105,51 @@ export class KbStatefulStack extends cdk.Stack {
             },
             promptCreationMode: bedrock.PromptCreationMode.OVERRIDDEN,
             promptState: bedrock.PromptState.ENABLED,
-            basePromptTemplate: fs.readFileSync(path.join(__dirname, '../prompt-templates/preprocessing.xml')).toString(),
+            basePromptTemplate: fs.readFileSync(path.join(__dirname, '../prompt-templates/tam-agent/preprocessing.xml')).toString(),
+            parserMode: bedrock.ParserMode.DEFAULT
+          },
+          // {
+          //   promptType: bedrock.PromptType.ORCHESTRATION,
+          //   inferenceConfiguration: {
+          //     temperature: 0,
+          //     topP: 1,
+          //     topK: 250,
+          //     stopSequences: ['</function_call>','</answer>','</error>'],
+          //     maximumLength: 2048,
+          //   },
+          //   promptCreationMode: bedrock.PromptCreationMode.OVERRIDDEN,
+          //   promptState: bedrock.PromptState.ENABLED,
+          //   basePromptTemplate: fs.readFileSync(path.join(__dirname, '../prompt-templates/tam-agent/orchestration.xml')).toString(),
+          //   parserMode: bedrock.ParserMode.DEFAULT
+          // }
+        ]
+      }
+    });
+
+    const opsAgent = new bedrock.Agent(this, 'OpsnAgent', {
+      name: 'OpsAgent',
+      description: 'The agent to assist in operational actions.',
+      foundationModel: bedrock.BedrockFoundationModel.ANTHROPIC_CLAUDE_V2,
+      instruction:
+        'You are a cloud operations assistant that answers questions and takes actions related to operational events, issues, and notifications. You have the help from an AWS TAM who can provide information about any AWS operations events, issues, and/or notifications. Uou can use actions available from your action groups to find out details about tickets.',
+      idleSessionTTL: cdk.Duration.minutes(15),
+      // knowledgeBases: [this.knowledgeBase],
+      shouldPrepareAgent: false,
+      aliasName: 'OpsAgent',
+      promptOverrideConfiguration: {
+        promptConfigurations: [
+          {
+            promptType: bedrock.PromptType.PRE_PROCESSING,
+            inferenceConfiguration: {
+              temperature: 0,
+              topP: 1,
+              topK: 250,
+              stopSequences: ['\n\nHuman:'],
+              maximumLength: 2048,
+            },
+            promptCreationMode: bedrock.PromptCreationMode.OVERRIDDEN,
+            promptState: bedrock.PromptState.ENABLED,
+            basePromptTemplate: fs.readFileSync(path.join(__dirname, '../prompt-templates/ops-agent/preprocessing.xml')).toString(),
             parserMode: bedrock.ParserMode.DEFAULT
           },
           {
@@ -118,7 +163,7 @@ export class KbStatefulStack extends cdk.Stack {
             },
             promptCreationMode: bedrock.PromptCreationMode.OVERRIDDEN,
             promptState: bedrock.PromptState.ENABLED,
-            basePromptTemplate: fs.readFileSync(path.join(__dirname, '../prompt-templates/orchestration.xml')).toString(),
+            basePromptTemplate: fs.readFileSync(path.join(__dirname, '../prompt-templates/ops-agent/orchestration.xml')).toString(),
             parserMode: bedrock.ParserMode.DEFAULT
           }
         ]
@@ -135,8 +180,8 @@ export class KbStatefulStack extends cdk.Stack {
       architecture: lambda.Architecture.ARM_64,
       reservedConcurrentExecutions: 1,
       environment: {
-        AGENT_ID: agent.agentId,
-        AGENT_ALIAS_ID: agent.aliasId as string
+        AGENT_ID: opsAgent.agentId,
+        AGENT_ALIAS_ID: opsAgent.aliasId as string
       },
     });
 
@@ -160,10 +205,10 @@ export class KbStatefulStack extends cdk.Stack {
       }),
     );
 
-    /*** action group executor funtion **************/
-    this.proxyActionGroupFunction = new lambda.Function(this, 'ProxyActionGroupFunction', {
+    /*** Operations assisant action group executor funtion **************/
+    this.opsActionGroupFunction = new lambda.Function(this, 'OpsActionGroupFunction', {
       runtime: lambda.Runtime.NODEJS_18_X,
-      code: lambda.Code.fromAsset('lambda/src/.aws-sam/build/ProxyActionGroupFunction'),
+      code: lambda.Code.fromAsset('lambda/src/.aws-sam/build/OpsActionGroupFunction'),
       handler: 'app.lambdaHandler',
       timeout: cdk.Duration.seconds(60),
       memorySize: 128,
@@ -176,13 +221,13 @@ export class KbStatefulStack extends cdk.Stack {
       },
     });
 
-    const proxyActionGroupLogGroup = new logs.LogGroup(this, 'proxyActionGroupLogGroup', {
-      logGroupName: `/aws/lambda/${this.proxyActionGroupFunction.functionName}`,
+    const opsActionGroupLogGroup = new logs.LogGroup(this, 'OpsActionGroupLogGroup', {
+      logGroupName: `/aws/lambda/${this.opsActionGroupFunction.functionName}`,
       retention: logs.RetentionDays.ONE_WEEK,
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
 
-    const proxyActionGroupPolicy = new iam.PolicyStatement({
+    const opsActionGroupPolicy = new iam.PolicyStatement({
       actions: [
         "bedrock:InvokeAgent",
         "bedrock:RetrieveAndGenerate",
@@ -190,25 +235,77 @@ export class KbStatefulStack extends cdk.Stack {
         "bedrock:InvokeModel",
         "dynamodb:*"
       ],
-      resources: [agent.agentArn, this.knowledgeBase.knowledgeBaseArn, `arn:aws:bedrock:${cdk.Aws.REGION}::foundation-model/anthropic.claude-v2`, 'arn:aws:dynamodb:*'],
+      resources: [opsAgent.agentArn, this.knowledgeBase.knowledgeBaseArn, `arn:aws:bedrock:${cdk.Aws.REGION}::foundation-model/anthropic.claude-v2`, 'arn:aws:dynamodb:*'],
       effect: cdk.aws_iam.Effect.ALLOW
     });
 
-    this.proxyActionGroupFunction.role?.attachInlinePolicy(
-      new iam.Policy(this, 'action-group-proxy-policy', {
-        statements: [proxyActionGroupPolicy],
+    this.opsActionGroupFunction.role?.attachInlinePolicy(
+      new iam.Policy(this, 'action-group-ops-policy', {
+        statements: [opsActionGroupPolicy],
       }),
     );
 
-    const agentActionGroup = new bedrock.AgentActionGroup(this, 'HyperConnAgentActionGroup', {
-      actionGroupName: 'hyper-conn-action-group',
-      description: 'The action group for cloud operation actions',
-      agent: agent,
+    /*** TAM consultant action group executor funtion **************/
+    this.tamActionGroupFunction = new lambda.Function(this, 'TamActionGroupFunction', {
+      runtime: lambda.Runtime.NODEJS_18_X,
+      code: lambda.Code.fromAsset('lambda/src/.aws-sam/build/TamActionGroupFunction'),
+      handler: 'app.lambdaHandler',
+      timeout: cdk.Duration.seconds(60),
+      memorySize: 128,
+      architecture: lambda.Architecture.ARM_64,
+      reservedConcurrentExecutions: 1,
+      environment: {
+        "TICKET_TABLE": props.healthEventManagementTableName,
+        "KB_ID": this.knowledgeBase.knowledgeBaseId,
+        "LLM_MODEL_ARN": `arn:aws:bedrock:${cdk.Aws.REGION}::foundation-model/anthropic.claude-v2`
+      },
+    });
+
+    const tamActionGroupLogGroup = new logs.LogGroup(this, 'TamActionGroupLogGroup', {
+      logGroupName: `/aws/lambda/${this.tamActionGroupFunction.functionName}`,
+      retention: logs.RetentionDays.ONE_WEEK,
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+    });
+
+    const tamActionGroupPolicy = new iam.PolicyStatement({
+      actions: [
+        "bedrock:InvokeAgent",
+        "bedrock:RetrieveAndGenerate",
+        "bedrock:Retrieve",
+        "bedrock:InvokeModel",
+        "dynamodb:*"
+      ],
+      resources: [tamAgent.agentArn, this.knowledgeBase.knowledgeBaseArn, `arn:aws:bedrock:${cdk.Aws.REGION}::foundation-model/anthropic.claude-v2`, 'arn:aws:dynamodb:*'],
+      effect: cdk.aws_iam.Effect.ALLOW
+    });
+
+    this.tamActionGroupFunction.role?.attachInlinePolicy(
+      new iam.Policy(this, 'action-group-tam-policy', {
+        statements: [tamActionGroupPolicy],
+      }),
+    );
+
+    // const tamAgentActionGroup = new bedrock.AgentActionGroup(this, 'TamAgentActionGroup', {
+    //   actionGroupName: 'tam-action-group',
+    //   description: 'The action group for TAM agent',
+    //   agent: tamAgent,
+    //   apiSchema: bedrock.S3ApiSchema.fromAsset(
+    //     path.join(__dirname, './schema/api-tam.json')
+    //   ),
+    //   actionGroupState: 'ENABLED',
+    //   actionGroupExecutor: this.tamActionGroupFunction,
+    //   shouldPrepareAgent: true,
+    // });
+
+    const osAgentActionGroup = new bedrock.AgentActionGroup(this, 'OpsAgentActionGroup', {
+      actionGroupName: 'ops-action-group',
+      description: 'The action group for cloud operations assistant agent',
+      agent: opsAgent,
       apiSchema: bedrock.S3ApiSchema.fromAsset(
-        path.join(__dirname, './schema/api.json')
+        path.join(__dirname, './schema/api-ops.json')
       ),
       actionGroupState: 'ENABLED',
-      actionGroupExecutor: this.proxyActionGroupFunction,
+      actionGroupExecutor: this.opsActionGroupFunction,
       shouldPrepareAgent: true,
     });
   }

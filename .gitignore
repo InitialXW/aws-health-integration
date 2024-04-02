@@ -9,4 +9,5 @@ cdk.out
 .vscode
 lambda/src/events
 testdeployment
+prompt-templates/bkup
 *.drawio

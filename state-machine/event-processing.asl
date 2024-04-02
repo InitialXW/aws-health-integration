@@ -9,7 +9,7 @@
         "TableName": "${HealthEventManagementTablePlaceHolder}",
         "Key": {
           "PK": {
-            "S.$": "States.Format('{}~{}', $.detail.eventArn, $.detail.affectedAccount)"
+            "S.$": "States.Format('{}~{}~{}', $.detail.eventArn, $.detail.affectedAccount, $.detail.eventRegion)"
           }
         }
       },
@@ -36,7 +36,7 @@
         "TableName": "${HealthEventManagementTablePlaceHolder}",
         "Item": {
           "PK": {
-            "S.$": "States.Format('{}~{}-{}', $.detail.eventArn, $.detail.affectedAccount, $.detail.eventRegion)"
+            "S.$": "States.Format('{}~{}~{}', $.detail.eventArn, $.detail.affectedAccount, $.detail.eventRegion)"
           },
           "AffectedAccount": {
             "S.$": "$.detail.affectedAccount"
@@ -116,7 +116,7 @@
         "TableName": "${HealthEventManagementTablePlaceHolder}",
         "Key": {
           "PK": {
-            "S.$": "States.Format('{}~{}-{}', $.detail.eventArn, $.detail.affectedAccount, $.detail.eventRegion)"
+            "S.$": "States.Format('{}~{}~{}', $.detail.eventArn, $.detail.affectedAccount, $.detail.eventRegion)"
           }
         },
         "UpdateExpression": "SET TicketCreatedAt = :myValueRef",
@@ -136,7 +136,7 @@
         "TableName": "${HealthEventManagementTablePlaceHolder}",
         "Key": {
           "PK": {
-            "S.$": "States.Format('{}~{}-{}', $.detail.eventArn, $.detail.affectedAccount, $.detail.eventRegion)"
+            "S.$": "States.Format('{}~{}~{}', $.detail.eventArn, $.detail.affectedAccount, $.detail.eventRegion)"
           }
         },
         "UpdateExpression": "SET TicketRejectedAt = :myValueRef1, EvenActionStatus = :myValueRef2",

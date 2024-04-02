@@ -8,8 +8,8 @@
   "paths": {
     "/ask-tam": {
       "post": {
-        "summary": "A TAM consultant for any questions about events or operational issues. TAM knows all details about a given event or issue, including eventArn, actions needed for the event, event status, event action status, event start date, affected accounts, and etc. But TAM consultant does not have any knowledge or information about tickets.",
-        "description": "A TAM consultant for any questions about events or operational issues. TAM knows all details about a given event or issue, including eventArn, actions needed for the event, event status, event action status, event start date, affected accounts, and etc. But TAM consultant does not have any knowledge or information about tickets.",
+        "summary": "A TAM consultant for any questions about events or operational issues.",
+        "description": "A TAM consultant for any questions about events, operational issues or lifecycle notifications. TAM knows all details about a given event or issue, including eventArn, actions needed for the event, event status, event action status, event start date, affected accounts, and etc. TAM consultant does not have any knowledge or information about tickets.",
         "operationId": "ask-tam",
         "parameters": [],
         "requestBody": {

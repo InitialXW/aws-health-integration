@@ -120,11 +120,11 @@ Resources:
         EntryPoints:
         - app.ts
 
-  ProxyActionGroupFunction:
+  OpsActionGroupFunction:
     Type: AWS::Serverless::Function
     Properties:
       PackageType: Zip
-      CodeUri: handlers/proxyActionGroup/
+      CodeUri: handlers/opsActionGroup/
       Handler: app.lambdaHandler
       Runtime: nodejs18.x
       Timeout: 10
@@ -146,3 +146,28 @@ Resources:
         EntryPoints:
         - app.ts
 
+  TamActionGroupFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      PackageType: Zip
+      CodeUri: handlers/tamActionGroup/
+      Handler: app.lambdaHandler
+      Runtime: nodejs18.x
+      Timeout: 10
+      MemorySize: 128
+      Architectures:
+        # - x86_64
+        - arm64
+      Environment:
+        Variables:
+          TICKET_TABLE: "string"
+          KB_ID: "string"
+          LLM_MODEL_ARN: "string"
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: "es2020"
+        Sourcemap: false
+        EntryPoints:
+        - app.ts
