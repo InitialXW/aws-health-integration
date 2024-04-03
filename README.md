@@ -13,7 +13,7 @@
 - A visualization microservice with an S3 event data lake and AWS Quicksight at its core (QuickSight BI dashboards is work-in-progress)
 - A knowledge base backed by a serverless vector store with Amazon Bedrock API running on top to provide RAG-based (Retrieval Augmented Generation) gen-AI powered chatbot via Slack as the interface
 - A chatbot using Slack as the UI to interact with the backend gen-AI features, similar functionalities can be implemented on MS TEAMS.
-- An Amazon Bedrock agent that actions on instructions via the operation chatbot
+- A multi-agent implementation that can be used side-by-side with the RAG-based chatbot to illustrate the power of multi-agent design using Amazon Bedrock Agent on top of LLMs
 
 ## Prerequisites
 - At least 1 AWS account with appropriate permissions. The project uses a typical setup of 2 accounts where as 1 is the org admin account and the other is the worker account hosting all the microservices.
