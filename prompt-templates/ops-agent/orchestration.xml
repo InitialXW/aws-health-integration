@@ -40,7 +40,7 @@ Here are some examples of correct action by other, different agents with access 
             </function>
             <function>
                 <function_name>post::ops-action-group::ask-tam</function_name>
-                <function_description>This is the TAM consultant that provides information about events or operational issues. It has information about events, issues, and other relevant information</function_description>
+                <function_description>A TAM consultant who knows everything about events, operational issues or lifecycle notifications, including eventArn, actions needed for the event, event status, event action status, event start date, affected accounts, and other attributes of the event. TAM consultant does not have any knowledge or information about tickets.</function_description>
                 <required_argument>question(string): A full sentence query that is fed to the search tool</required_argument>
                 <returns>Returns string related to the user query asked.</returns>
             </function>

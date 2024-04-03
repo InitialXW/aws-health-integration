@@ -196,7 +196,7 @@ export class KbStatefulStack extends cdk.Stack {
       runtime: lambda.Runtime.NODEJS_18_X,
       code: lambda.Code.fromAsset('lambda/src/.aws-sam/build/OpsActionGroupFunction'),
       handler: 'app.lambdaHandler',
-      timeout: cdk.Duration.seconds(60),
+      timeout: cdk.Duration.seconds(120),
       memorySize: 128,
       architecture: lambda.Architecture.ARM_64,
       reservedConcurrentExecutions: 1,
