@@ -3,10 +3,15 @@ import { fromNodeProviderChain } from "@aws-sdk/credential-providers";
 import { DynamoDBClient, ScanCommand } from "@aws-sdk/client-dynamodb";
 import {
   BedrockAgentRuntimeClient,
+  InvokeAgentCommand,
+  InvokeAgentRequest,
+  InvokeAgentResponse,
   RetrieveAndGenerateCommand,
   RetrieveAndGenerateCommandInput,
   RetrieveAndGenerateCommandOutput,
 } from '@aws-sdk/client-bedrock-agent-runtime';
+
+import { v4 as uuid } from 'uuid';
 
 interface ActionGroupEvent {
   messageVersion: string;
@@ -90,23 +95,50 @@ export const lambdaHandler = async (event: ActionGroupEvent): Promise<ActionGrou
       break;
 
     case '/ask-tam':
-      const input: RetrieveAndGenerateCommandInput = {
-        input: {
-          text: event.requestBody.content['application/json'].properties[0].value,
-        },
-        retrieveAndGenerateConfiguration: {
-          type: 'KNOWLEDGE_BASE',
-          knowledgeBaseConfiguration: {
-            knowledgeBaseId: process.env.KB_ID,
-            modelArn: process.env.LLM_MODEL_ARN,
-          },
-        },
+      let sessionId = uuid()
+      const prompt = event.requestBody.content['application/json'].properties[0].value
+
+      const input: InvokeAgentRequest = {
+        // sessionState: {
+        //   sessionAttributes,
+        //   promptSessionAttributes,
+        // },
+        agentId: process.env.AGENT_ID,
+        agentAliasId: process.env.AGENT_ALIAS_ID,
+        sessionId: sessionId,
+        inputText: prompt,
       };
-      const ragCommand: RetrieveAndGenerateCommand = new RetrieveAndGenerateCommand(
-        input
-      );
-      const ragResponse: RetrieveAndGenerateCommandOutput = await bedrockAgent.send(ragCommand);
-      body = ragResponse.output?.text as string;
+
+      const agentCommand: InvokeAgentCommand = new InvokeAgentCommand(input);
+      const agentResponse: InvokeAgentResponse = await bedrockAgent.send(agentCommand);
+
+      const chunks = [];
+      const completion = agentResponse.completion || [];
+      for await (const chunk of completion) {
+        if (chunk.chunk && chunk.chunk.bytes) {
+          const output = Buffer.from(chunk.chunk.bytes).toString('utf-8');
+          chunks.push(output);
+        }
+      }
+      body = chunks.join(' ');
+
+      // const input: RetrieveAndGenerateCommandInput = {
+      //   input: {
+      //     text: event.requestBody.content['application/json'].properties[0].value,
+      //   },
+      //   retrieveAndGenerateConfiguration: {
+      //     type: 'KNOWLEDGE_BASE',
+      //     knowledgeBaseConfiguration: {
+      //       knowledgeBaseId: process.env.KB_ID,
+      //       modelArn: process.env.LLM_MODEL_ARN,
+      //     },
+      //   },
+      // };
+      // const ragCommand: RetrieveAndGenerateCommand = new RetrieveAndGenerateCommand(
+      //   input
+      // );
+      // const ragResponse: RetrieveAndGenerateCommandOutput = await bedrockAgent.send(ragCommand);
+      // body = ragResponse.output?.text as string;
       break;
 
     default:

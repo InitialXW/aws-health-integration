@@ -108,20 +108,6 @@ export class KbStatefulStack extends cdk.Stack {
             basePromptTemplate: fs.readFileSync(path.join(__dirname, '../prompt-templates/tam-agent/preprocessing.xml')).toString(),
             parserMode: bedrock.ParserMode.DEFAULT
           },
-          // {
-          //   promptType: bedrock.PromptType.ORCHESTRATION,
-          //   inferenceConfiguration: {
-          //     temperature: 0,
-          //     topP: 1,
-          //     topK: 250,
-          //     stopSequences: ['</function_call>','</answer>','</error>'],
-          //     maximumLength: 2048,
-          //   },
-          //   promptCreationMode: bedrock.PromptCreationMode.OVERRIDDEN,
-          //   promptState: bedrock.PromptState.ENABLED,
-          //   basePromptTemplate: fs.readFileSync(path.join(__dirname, '../prompt-templates/tam-agent/orchestration.xml')).toString(),
-          //   parserMode: bedrock.ParserMode.DEFAULT
-          // }
         ]
       }
     });
@@ -131,7 +117,7 @@ export class KbStatefulStack extends cdk.Stack {
       description: 'The agent to assist in operational actions.',
       foundationModel: bedrock.BedrockFoundationModel.ANTHROPIC_CLAUDE_V2,
       instruction:
-        'You are a cloud operations assistant that answers questions and takes actions related to operational events, issues, and notifications. You have the help from an AWS TAM who can provide information about any AWS operations events, issues, and/or notifications. Uou can use actions available from your action groups to find out details about tickets.',
+        'You are a cloud operations assistant that answers questions and takes actions related to operational events, issues, and notifications. You have the help from an AWS TAM who can provide information about any AWS operations events, issues, and/or notifications. You can use actions available from your action groups to find out details about tickets.',
       idleSessionTTL: cdk.Duration.minutes(15),
       // knowledgeBases: [this.knowledgeBase],
       shouldPrepareAgent: false,
@@ -217,7 +203,9 @@ export class KbStatefulStack extends cdk.Stack {
       environment: {
         "TICKET_TABLE": props.healthEventManagementTableName,
         "KB_ID": this.knowledgeBase.knowledgeBaseId,
-        "LLM_MODEL_ARN": `arn:aws:bedrock:${cdk.Aws.REGION}::foundation-model/anthropic.claude-v2`
+        "LLM_MODEL_ARN": `arn:aws:bedrock:${cdk.Aws.REGION}::foundation-model/anthropic.claude-v2`,
+        "AGENT_ID": tamAgent.agentId,
+        "AGENT_ALIAS_ID": tamAgent.aliasId as string
       },
     });
 
@@ -235,7 +223,7 @@ export class KbStatefulStack extends cdk.Stack {
         "bedrock:InvokeModel",
         "dynamodb:*"
       ],
-      resources: [opsAgent.agentArn, this.knowledgeBase.knowledgeBaseArn, `arn:aws:bedrock:${cdk.Aws.REGION}::foundation-model/anthropic.claude-v2`, 'arn:aws:dynamodb:*'],
+      resources: [tamAgent.aliasArn as string, this.knowledgeBase.knowledgeBaseArn, `arn:aws:bedrock:${cdk.Aws.REGION}::foundation-model/anthropic.claude-v2`, 'arn:aws:dynamodb:*'],
       effect: cdk.aws_iam.Effect.ALLOW
     });
 
@@ -246,44 +234,44 @@ export class KbStatefulStack extends cdk.Stack {
     );
 
     /*** TAM consultant action group executor funtion **************/
-    this.tamActionGroupFunction = new lambda.Function(this, 'TamActionGroupFunction', {
-      runtime: lambda.Runtime.NODEJS_18_X,
-      code: lambda.Code.fromAsset('lambda/src/.aws-sam/build/TamActionGroupFunction'),
-      handler: 'app.lambdaHandler',
-      timeout: cdk.Duration.seconds(60),
-      memorySize: 128,
-      architecture: lambda.Architecture.ARM_64,
-      reservedConcurrentExecutions: 1,
-      environment: {
-        "TICKET_TABLE": props.healthEventManagementTableName,
-        "KB_ID": this.knowledgeBase.knowledgeBaseId,
-        "LLM_MODEL_ARN": `arn:aws:bedrock:${cdk.Aws.REGION}::foundation-model/anthropic.claude-v2`
-      },
-    });
+    // this.tamActionGroupFunction = new lambda.Function(this, 'TamActionGroupFunction', {
+    //   runtime: lambda.Runtime.NODEJS_18_X,
+    //   code: lambda.Code.fromAsset('lambda/src/.aws-sam/build/TamActionGroupFunction'),
+    //   handler: 'app.lambdaHandler',
+    //   timeout: cdk.Duration.seconds(60),
+    //   memorySize: 128,
+    //   architecture: lambda.Architecture.ARM_64,
+    //   reservedConcurrentExecutions: 1,
+    //   environment: {
+    //     "TICKET_TABLE": props.healthEventManagementTableName,
+    //     "KB_ID": this.knowledgeBase.knowledgeBaseId,
+    //     "LLM_MODEL_ARN": `arn:aws:bedrock:${cdk.Aws.REGION}::foundation-model/anthropic.claude-v2`
+    //   },
+    // });
 
-    const tamActionGroupLogGroup = new logs.LogGroup(this, 'TamActionGroupLogGroup', {
-      logGroupName: `/aws/lambda/${this.tamActionGroupFunction.functionName}`,
-      retention: logs.RetentionDays.ONE_WEEK,
-      removalPolicy: cdk.RemovalPolicy.DESTROY,
-    });
+    // const tamActionGroupLogGroup = new logs.LogGroup(this, 'TamActionGroupLogGroup', {
+    //   logGroupName: `/aws/lambda/${this.tamActionGroupFunction.functionName}`,
+    //   retention: logs.RetentionDays.ONE_WEEK,
+    //   removalPolicy: cdk.RemovalPolicy.DESTROY,
+    // });
 
-    const tamActionGroupPolicy = new iam.PolicyStatement({
-      actions: [
-        "bedrock:InvokeAgent",
-        "bedrock:RetrieveAndGenerate",
-        "bedrock:Retrieve",
-        "bedrock:InvokeModel",
-        "dynamodb:*"
-      ],
-      resources: [tamAgent.agentArn, this.knowledgeBase.knowledgeBaseArn, `arn:aws:bedrock:${cdk.Aws.REGION}::foundation-model/anthropic.claude-v2`, 'arn:aws:dynamodb:*'],
-      effect: cdk.aws_iam.Effect.ALLOW
-    });
+    // const tamActionGroupPolicy = new iam.PolicyStatement({
+    //   actions: [
+    //     "bedrock:InvokeAgent",
+    //     "bedrock:RetrieveAndGenerate",
+    //     "bedrock:Retrieve",
+    //     "bedrock:InvokeModel",
+    //     "dynamodb:*"
+    //   ],
+    //   resources: [tamAgent.agentArn, this.knowledgeBase.knowledgeBaseArn, `arn:aws:bedrock:${cdk.Aws.REGION}::foundation-model/anthropic.claude-v2`, 'arn:aws:dynamodb:*'],
+    //   effect: cdk.aws_iam.Effect.ALLOW
+    // });
 
-    this.tamActionGroupFunction.role?.attachInlinePolicy(
-      new iam.Policy(this, 'action-group-tam-policy', {
-        statements: [tamActionGroupPolicy],
-      }),
-    );
+    // this.tamActionGroupFunction.role?.attachInlinePolicy(
+    //   new iam.Policy(this, 'action-group-tam-policy', {
+    //     statements: [tamActionGroupPolicy],
+    //   }),
+    // );
 
     // const tamAgentActionGroup = new bedrock.AgentActionGroup(this, 'TamAgentActionGroup', {
     //   actionGroupName: 'tam-action-group',
