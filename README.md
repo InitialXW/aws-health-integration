@@ -7,7 +7,7 @@
 - Cost of running/hosting on AWS should be less than US$5 per month with reasonable amount of events consumed.
 - (Optional) Cost of hosting the AI-augmented stack is subject to the actual consumption of queries and the size of vector store, please consult [AWS Bedrock pricing](https://aws.amazon.com/bedrock/pricing/) and [AWS OpenSearch pricing](https://aws.amazon.com/opensearch-service/pricing/#Amazon_OpenSearch_Serverless) for pricing details. 
 
-## Summary of what is contained
+## Highlights of what is contained
 - An AWS Health event processing microservice to consume organization health events and an example tracking/triage workflow.
 - A health event integration microservice to manage 3rd party service integrations (used Slack and Amazon DynamoDB as example but can be extended to integrate with Jira and ServiceNow via free plugins from AWS Marketplace).
 - A visualization microservice with an S3 event data lake and AWS Quicksight at its core (QuickSight BI dashboards is work-in-progress)
@@ -27,12 +27,12 @@
   alt="Usage scrrenshot1 by seanxw">
 </p>
 
-### AI-powered operation assistant
+### RAG-powered AI operations assistant chatbot
 <img src="./screenshots/screenshot2.png"
   alt="Usage screenshot2 by seanxw">
 </p>
 
-### AI-powered operation agent to take actions
+### Multi-agent implementation to illustrate the design of >1 agents (each with unique domain of expertise) teaming up to solve more complex tasks (1 agent playing the role of an operations specialist and another agent acting as a technical consultant equiped with the health event knowledge base)
 <img src="./screenshots/screenshot3.png"
   alt="Usage screenshot3 by seanxw">
 </p>
