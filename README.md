@@ -32,7 +32,7 @@
   alt="Usage screenshot2 by seanxw">
 </p>
 
-### Multi-agent implementation to illustrate the design of >1 agents (each with unique domain of expertise) teaming up to solve more complex tasks (1 agent playing the role of an operations specialist and another agent acting as a technical consultant equiped with the health event knowledge base)
+### Multi-agent implementation to illustrate the design of >1 agents (each with unique domain of expertise) teaming up to solve more complex tasks (1 agent playing the role of an operations/ticketing specialist and another one acting as a technical consultant equiped with AWS Health event knowledge base)
 <img src="./screenshots/screenshot3.png"
   alt="Usage screenshot3 by seanxw">
 </p>
